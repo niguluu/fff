@@ -10,6 +10,10 @@
 - ⌨️ **Vim-like navigation** — Arrow keys for history, Page Up/Down for scrolling
 - 🎨 **Beautiful TUI** — Color-coded messages, streaming output, and alternate screen buffer
 - 🔄 **Automatic context pruning** — Keeps conversations manageable by trimming old messages
+- 📝 **Word wrap** — Long messages wrap cleanly at column boundaries
+- 🎯 **Syntax highlighting** — Code blocks and `<think>` reasoning blocks styled distinctly
+- 📋 **Clipboard integration** — Copy last assistant response with a keybind
+- ✏️ **Multi-line input** — Shift+Enter for multi-line prompts
 
 ## Installation
 
@@ -17,6 +21,7 @@
 
 - [Bun](https://bun.sh) (runtime and package manager)
 - An OpenAI API key (or compatible LLM provider)
+- `xclip`, `wl-copy`, or `pbcopy` for clipboard support (optional)
 
 ### Quick Install
 
@@ -25,18 +30,20 @@
 git clone https://github.com/yourusername/fff.git
 cd fff
 
-# Install dependencies
-bun install
+# Run the install script (builds + installs to ~/.fff and ~/.local/bin/fff)
+./install.sh
+```
 
-# Set up your environment
-cp .env.example .env
-# Edit .env and add your OPENAI_API_KEY
+The install script will:
+1. Build the project with `bun`
+2. Install the bundled CLI to `~/.fff/`
+3. Create a `fff` wrapper in `~/.local/bin/`
+4. Copy `.env.example` to `~/.fff/.env` if no config exists
 
-# Build the CLI
-bun run build
+Make sure `~/.local/bin` is in your `PATH`. If not, add this to your shell profile:
 
-# (Optional) Install globally
-bun link
+```bash
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
 ### Environment Variables
@@ -44,23 +51,19 @@ bun link
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OPENAI_API_KEY` | Your OpenAI API key | (required) |
-| `OPENAI_BASE_URL` | Custom API endpoint | `https://api.openai.com/v1` |
-| `OPENAI_MODEL` | Model to use | `gpt-4o` |
-| `MAX_TOOL_ROUNDS` | Max tool execution rounds | `20` |
+| `OPENAI_BASE_URL` | Custom API endpoint | `https://api.deepseek.com/v1` |
+| `OPENAI_MODEL` | Model to use | `deepseek-v4-flash` |
+| `MAX_TOOL_ROUNDS` | Max tool execution rounds | `100` |
 | `MAX_CONVERSATION_MESSAGES` | Max messages before pruning | `40` |
 
 ## Usage
 
 ```bash
-# Run directly with Bun
-bun start
-
-# Or use the built version
-bun run build
-./dist/index.js
-
-# If linked globally
+# Run from anywhere (after install)
 fff
+
+# Or run directly in the repo
+bun run start
 ```
 
 ### Commands & Controls
@@ -68,8 +71,15 @@ fff
 | Key | Action |
 |-----|--------|
 | `Enter` | Send your message |
-| `↑` / `↓` | Navigate input history |
+| `Shift+Enter` | Insert newline (multi-line input) |
+| `↑` / `↓` | Navigate input history (or move between lines in multi-line) |
+| `←` / `→` | Move cursor left/right |
+| `Home` | Move cursor to start of line |
+| `End` | Move cursor to end of line |
 | `Page Up` / `Page Down` | Scroll through conversation |
+| `Ctrl+Y` | Copy last assistant response to clipboard |
+| `Ctrl+E` | Expand/collapse last tool result |
+| `Ctrl+A` | Expand/collapse all tool results |
 | `Ctrl+C` / `Esc` | Exit the application |
 
 ### Example Conversation
@@ -96,6 +106,7 @@ fff/
 │   ├── llm.ts         # LLM client & tool invocation parser
 │   └── tools.ts       # Tool implementations (read, list, edit, overwrite)
 ├── dist/              # Built output
+├── install.sh         # System install script
 ├── .env               # Environment configuration
 ├── package.json
 └── tsconfig.json
