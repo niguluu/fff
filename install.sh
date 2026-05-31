@@ -37,8 +37,8 @@ bun build src/index.tsx --outdir dist --target node --external react-devtools-co
 
 # Install files
 echo "==> Installing to $INSTALL_DIR..."
-mkdir -p "$INSTALL_DIR"
-cp -f dist/index.js "$INSTALL_DIR/"
+mkdir -p "$INSTALL_DIR/dist"
+cp -f dist/index.js "$INSTALL_DIR/dist/"
 cp -f package.json "$INSTALL_DIR/" 2>/dev/null || true
 
 # .env
