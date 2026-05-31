@@ -1,25 +1,24 @@
 {
   "name": "fff",
-  "module": "src/index.tsx",
+  "version": "1.0.0",
+  "description": "AI coding assistant CLI",
+  "main": "src/index.tsx",
   "type": "module",
-  "private": true,
+  "bin": {
+    "fff": "./dist/index.js"
+  },
   "scripts": {
+    "build": "bun build src/index.tsx --outdir dist --target node",
     "start": "bun run src/index.tsx",
-    "dev": "bun run --watch src/index.tsx"
-  },
-  "devDependencies": {
-    "@types/bun": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "dev": "bun --watch src/index.tsx"
   },
   "dependencies": {
-    "@types/react": "^19.2.15",
-    "ink": "^7.0.5",
-    "openai": "^6.39.1",
-    "react": "^19.2.6",
-    "tree-sitter": "^0.22.0",
-    "tree-sitter-typescript": "^0.23.0"
+    "ink": "^4.4.0",
+    "react": "^18.2.0",
+    "openai": "^4.0.0"
   },
-
+  "devDependencies": {
+    "@types/react": "^18.2.0",
+    "typescript": "^5.0.0"
+  }
 }
