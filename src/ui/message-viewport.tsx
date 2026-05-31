@@ -3,11 +3,7 @@ import { Box, Text } from "ink";
 import type { Message } from "../llm/llm";
 import { ASSISTANT_COLOR, MUTED_COLOR, STATUS_BUSY_COLOR } from "../core/config";
 import { FillLines, padToWidth } from "./theme";
-
-function getStreamingPreview() {
-  return ["thinking…"];
-}
-import { MessageLine } from "./message-line";
+import { getAssistantRenderLines, MessageLine } from "./message-line";
 import type { ViewportModel } from "./viewport";
 
 type MessageViewportProps = {
@@ -34,8 +30,10 @@ export function MessageViewport({
   const { visibleMessages, visibleStart, hasMoreAbove, hasMoreBelow, clampedScroll, maxScroll } =
     viewport;
   const linesAbove = Math.max(0, maxScroll - clampedScroll);
-  const streamingLines = isStreaming ? getStreamingPreview() : [];
+  const streamingLines = isStreaming ? getAssistantRenderLines(streamingText, width) : [];
   const hasMessages = messages.length > 0 || isConnecting || isStreaming;
+  const visibleStreamingLines =
+    isStreaming && clampedScroll === 0 ? streamingLines.slice(-Math.max(0, height)) : [];
 
   const visibleMessageLines = viewport.messageHeights
     .slice(viewport.visibleStart)
@@ -43,7 +41,7 @@ export function MessageViewport({
   let usedLines = visibleMessageLines;
   if (hasMessages && hasMoreAbove) usedLines += 1;
   if (isConnecting && clampedScroll === 0 && !isStreaming) usedLines += 1;
-  if (isStreaming && clampedScroll === 0) usedLines += streamingLines.length;
+  if (isStreaming && clampedScroll === 0) usedLines += visibleStreamingLines.length;
   if (isStreaming && clampedScroll > 0) usedLines += 1;
   if (hasMessages && hasMoreBelow) usedLines += 1;
   const fillCount = Math.max(0, height - usedLines);
@@ -93,9 +91,9 @@ export function MessageViewport({
 
       {isStreaming && clampedScroll === 0 && (
         <Box flexDirection="column" width={width} overflow="hidden">
-          {streamingLines.map((line, index) => (
+          {visibleStreamingLines.map((line, index) => (
             <Box key={index} flexDirection="row">
-              <Text color={ASSISTANT_COLOR}>{padToWidth(line + " ", width)}</Text>
+              <Text color={ASSISTANT_COLOR}>{padToWidth(line, width)}</Text>
             </Box>
           ))}
         </Box>

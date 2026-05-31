@@ -134,7 +134,10 @@ export default function App() {
       clearTimeout(flushTimerRef.current);
       flushTimerRef.current = null;
     }
+    const pending = streamingRef.current;
+    if (!pending) return;
     streamingRef.current = "";
+    setStreamingText((prev) => prev + pending);
   }, []);
 
   const scheduleFlush = useCallback(() => {
@@ -247,10 +250,12 @@ export default function App() {
       onStatusChange: setStatus,
       onConnectingChange: setIsConnecting,
       onStreamingChange: setIsStreaming,
-      onStreamingTextChange: setStreamingText,
+      onStreamingTextChange: (value) => {
+        streamingRef.current = "";
+        setStreamingText(value);
+      },
       appendStreamingText: (chunk) => {
         setStreamingText((prev) => prev + chunk);
-        setScrollLines((prev) => (shouldAutoScroll(prev) ? 0 : prev));
       },
       onAutoScroll: () => {
         setScrollLines((prev) => (shouldAutoScroll(prev) ? 0 : prev));

@@ -20,6 +20,52 @@ import {
   wrapText,
 } from "../utils/message-format";
 
+type AssistantRenderLine = {
+  color: string;
+  text: string;
+};
+
+function buildAssistantRenderLines(content: string, width: number): AssistantRenderLine[] {
+  if (!content) return [{ color: TEXT_COLOR, text: "Thinking..." }];
+
+  const lines: AssistantRenderLine[] = [];
+  for (const segment of parseSegments(content)) {
+    if (segment.type === "text") {
+      const textLines = wrapText(segment.content, width);
+      lines.push(
+        ...(textLines.length ? textLines : [""]).map((text) => ({ color: TEXT_COLOR, text }))
+      );
+      continue;
+    }
+
+    if (segment.type === "thinking") {
+      lines.push({ color: MUTED_COLOR, text: " [thinking]" });
+      const thinkingLines = wrapText(segment.content, Math.max(1, width - 1));
+      lines.push(
+        ...(thinkingLines.length ? thinkingLines : [""]).map((text) => ({
+          color: MUTED_COLOR,
+          text: ` ${text}`,
+        }))
+      );
+      continue;
+    }
+
+    const codeLines = wrapText(segment.content, Math.max(1, width - 1));
+    lines.push(
+      ...(codeLines.length ? codeLines : [""]).map((text) => ({
+        color: TEXT_COLOR,
+        text: ` ${text}`,
+      }))
+    );
+  }
+
+  return lines.length > 0 ? lines : [{ color: TEXT_COLOR, text: "" }];
+}
+
+export function getAssistantRenderLines(content: string, width: number): string[] {
+  return buildAssistantRenderLines(content, width).map((line) => line.text);
+}
+
 export function getMessageHeight(
   message: Message,
   width: number,
@@ -42,11 +88,7 @@ export function getMessageHeight(
   if (message.role === "assistant") {
     const { invocations } = extractToolInvocations(message.content);
     if (invocations.length > 0) return invocations.length;
-    return parseSegments(message.content).reduce((total, segment) => {
-      const segmentWidth = segment.type === "text" ? width : Math.max(1, width - 2);
-      const lines = wrapText(segment.content, segmentWidth).length || 1;
-      return total + (segment.type === "thinking" ? lines + 1 : lines);
-    }, 0);
+    return getAssistantRenderLines(message.content, width).length;
   }
 
   return wrapText(message.content, width).length || 1;
@@ -142,46 +184,14 @@ export function MessageLine({ msg, width, index, isExpanded, messages }: Message
       );
     }
 
-    const segments = parseSegments(msg.content);
+    const lines = buildAssistantRenderLines(msg.content, width);
     return (
       <Box flexDirection="column">
-        {segments.map((segment, i) => {
-          if (segment.type === "text") {
-            const lines = wrapText(segment.content, width);
-            return lines.map((line, j) => (
-              <Text key={`${i}-${j}`} color={TEXT_COLOR}>
-                {padToWidth(line, width)}
-              </Text>
-            ));
-          }
-
-          if (segment.type === "thinking") {
-            const lines = wrapText(segment.content, width - 1);
-            return (
-              <Box key={i} flexDirection="column">
-                <Text color={MUTED_COLOR}>
-                  {padToWidth(" [thinking]", width)}
-                </Text>
-                {lines.map((line, j) => (
-                  <Text key={`${i}-${j}`} color={MUTED_COLOR}>
-                    {padToWidth(" " + line, width)}
-                  </Text>
-                ))}
-              </Box>
-            );
-          }
-
-          const lines = wrapText(segment.content, width - 1);
-          return (
-            <Box key={i} flexDirection="column">
-              {lines.map((line, j) => (
-                <Text key={`${i}-${j}`} color={TEXT_COLOR}>
-                  {padToWidth(" " + line, width)}
-                </Text>
-              ))}
-            </Box>
-          );
-        })}
+        {lines.map((line, i) => (
+          <Text key={i} color={line.color}>
+            {padToWidth(line.text, width)}
+          </Text>
+        ))}
       </Box>
     );
   }
