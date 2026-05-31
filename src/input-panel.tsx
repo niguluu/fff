@@ -156,17 +156,6 @@ export function InputPanel({ input, cursorPos, width, maxVisibleLines, status }:
         <FillLines count={Math.max(0, maxVisibleLines - visibleLines.length)} width={width} />
       </Box>
 
-      {/* Bottom border */}
-      <Box flexDirection="row" width={width} overflow="hidden">
-        {linesBelow > 0 ? (
-          <>
-            <Text color={PROMPT_ACCENT_COLOR} backgroundColor={THEME_BG}>{bottomBorder}</Text>
-            <Text color={PROMPT_ACCENT_COLOR} backgroundColor={THEME_BG}>{"─".repeat(Math.max(0, width - bottomBorder.length))}</Text>
-          </>
-        ) : (
-          <Text color={PROMPT_ACCENT_COLOR} backgroundColor={THEME_BG}>{"─".repeat(width)}</Text>
-        )}
-      </Box>
     </Box>
   );
 }
