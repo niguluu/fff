@@ -13,6 +13,7 @@ import {
   THEME_BG,
   YOU_COLOR,
 } from "./config.js";
+import { getVersion } from "./version.js";
 import { FillLines, padToWidth } from "./theme.js";
 import { wrapInputToVisualLines } from "./pi-prompt-utils.js";
 import { estimateTokens } from "./conversation.js";
@@ -67,8 +68,21 @@ export default function App() {
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const termRows = stdout.rows || 24;
-  const termCols = stdout.columns || 80;
+  const [termSize, setTermSize] = useState(() => [stdout.columns || 80, stdout.rows || 24]);
+  const termCols = termSize[0];
+  const termRows = termSize[1];
+
+  // Listen for terminal resize events so the UI re-renders with the new
+  // dimensions immediately instead of staying stuck at the original size.
+  useEffect(() => {
+    function onResize() {
+      setTermSize([stdout.columns || 80, stdout.rows || 24]);
+    }
+    stdout.on("resize", onResize);
+    return () => {
+      stdout.off("resize", onResize);
+    };
+  }, [stdout]);
   // The prompt is compact: it starts at a single line and grows with the input
   // only up to a small cap (never the old ~30% of the screen). This keeps the
   // box small while still letting multi-line input expand when needed.
@@ -315,7 +329,7 @@ export default function App() {
 
       {/* Divider that visually separates the prompt from the status bar. */}
       <Box height={dividerHeight} width={termCols} overflow="hidden">
-        <Text color={SEPARATOR_COLOR} dimColor backgroundColor={THEME_BG}>{"─".repeat(termCols)}</Text>
+        <Text color={SEPARATOR_COLOR} backgroundColor={THEME_BG}>{"─".repeat(termCols)}</Text>
       </Box>
 
       <StatusBar
@@ -372,8 +386,9 @@ function StatusBar({
   scroll: number;
   hasMoreBelow: boolean;
 }) {
+  const version = getVersion();
   const bullet = status === "thinking" ? "\u25cf" : "\u25cb";
-  const left = `fff ${bullet} ${statusLabel}`;
+  const left = `fff v${version} ${bullet} ${statusLabel}`;
   const centerLeft = `${model} | ${rounds} rounds | `;
   const center = centerLeft + ctxLabel;
   const copyPart = copyFeedback ? copyFeedback + " " : "";
@@ -391,12 +406,12 @@ function StatusBar({
         {left}
       </Text>
       <Text backgroundColor={THEME_BG}>{" ".repeat(gap1)}</Text>
-      <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>{centerLeft}</Text>
+      <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{centerLeft}</Text>
       <Text color={ctxColor} backgroundColor={THEME_BG}>{ctxLabel}</Text>
       <Text backgroundColor={THEME_BG}>{" ".repeat(gap2)}</Text>
       {copyPart && <Text color={STATUS_SUCCESS_COLOR} backgroundColor={THEME_BG}>{copyPart}</Text>}
-      {scrollPart && <Text color={STATUS_BUSY_COLOR} dimColor backgroundColor={THEME_BG}>{scrollPart}</Text>}
-      {bottomPart && <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>{bottomPart}</Text>}
+      {scrollPart && <Text color={STATUS_BUSY_COLOR} backgroundColor={THEME_BG}>{scrollPart}</Text>}
+      {bottomPart && <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{bottomPart}</Text>}
     </Box>
   );
 }
@@ -415,7 +430,7 @@ function SessionPicker({
     <Box flexDirection="column" justifyContent="flex-end" height={height} width={width} overflow="hidden">
       <FillLines count={Math.max(0, height - used)} width={width} />
       <Text color={YOU_COLOR} bold backgroundColor={THEME_BG}>{padToWidth("Recent sessions", width)}</Text>
-      <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>{padToWidth("type the number to resume, or .new for a fresh session", width)}</Text>
+      <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{padToWidth("type the number to resume, or .new for a fresh session", width)}</Text>
       <Text backgroundColor={THEME_BG}>{" ".repeat(width)}</Text>
       {sessions.map((session, index) => (
         <Box key={session.id} flexDirection="row" width={width} overflow="hidden">

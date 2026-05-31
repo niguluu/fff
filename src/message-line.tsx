@@ -114,7 +114,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
 
     if (!msg.content) {
       return (
-        <Text color={ASSISTANT_COLOR} dimColor backgroundColor={THEME_BG}>
+        <Text color={ASSISTANT_COLOR} backgroundColor={THEME_BG}>
           {padToWidth("Thinking...", width)}
         </Text>
       );
@@ -137,11 +137,11 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
             const lines = wrapText(segment.content, width - 1);
             return (
               <Box key={i} flexDirection="column">
-                <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>
+                <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
                   {padToWidth(" [thinking]", width)}
                 </Text>
                 {lines.map((line, j) => (
-                  <Text key={`${i}-${j}`} color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>
+                  <Text key={`${i}-${j}`} color={MUTED_COLOR} backgroundColor={THEME_BG}>
                     {padToWidth(" " + line, width)}
                   </Text>
                 ))}
@@ -153,7 +153,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
           return (
             <Box key={i} flexDirection="column">
               {lines.map((line, j) => (
-                <Text key={`${i}-${j}`} color={TEXT_COLOR} dimColor backgroundColor={THEME_BG}>
+                <Text key={`${i}-${j}`} color={TEXT_COLOR} backgroundColor={THEME_BG}>
                   {padToWidth(" " + line, width)}
                 </Text>
               ))}

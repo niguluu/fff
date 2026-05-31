@@ -96,6 +96,21 @@ export function useAppInput(args: UseAppInputArgs) {
     return { shift: (mods & 1) === 1 };
   }
 
+  // SGR mouse reporting (enabled in src/index.tsx) delivers events as
+  // `ESC [ < <button> ; <col> ; <row> (M|m)`. Ink strips the leading ESC, so we
+  // see e.g. `[<64;..M` (wheel up) / `[<65;..M` (wheel down) or `[<0;..M`
+  // (button press). Returns `"up"`/`"down"` for the wheel, `"other"` for any
+  // other mouse event (so it can be swallowed rather than inserted as text), or
+  // `null` when the sequence is not a mouse event at all.
+  function detectMouseEvent(char: string): "up" | "down" | "other" | null {
+    const m = /\x1b?\[<(\d+);\d+;\d+[Mm]/.exec(char);
+    if (!m) return null;
+    const button = Number(m[1]);
+    // Bit 6 (value 64) marks a wheel event; bit 0 selects the direction.
+    if ((button & 64) === 0) return "other";
+    return (button & 1) === 1 ? "down" : "up";
+  }
+
   function submitInput() {
     if (input.trim().length === 0 && !input.includes("\n")) return;
     const expanded = pasteStore.expand(input);
@@ -126,6 +141,24 @@ export function useAppInput(args: UseAppInputArgs) {
   }
 
   useInput((char, key) => {
+    // Mouse-wheel scroll: move the transcript viewport instead of cycling the
+    // prompt history (which is what happened when the terminal translated the
+    // wheel into Up/Down arrows). Keyboard arrows still navigate history.
+    if (char && char.length > 1) {
+      const mouse = detectMouseEvent(char);
+      if (mouse) {
+        const WHEEL_STEP = 3;
+        if (mouse === "up") {
+          setScrollLines((prev) => prev + WHEEL_STEP);
+        } else if (mouse === "down") {
+          setScrollLines((prev) => Math.max(0, prev - WHEEL_STEP));
+        }
+        // "other" mouse events (clicks/movement) are swallowed so their escape
+        // sequences are never inserted into the prompt as text.
+        return;
+      }
+    }
+
     if ((key.ctrl && char === "c") || key.escape) {
       exit();
       return;

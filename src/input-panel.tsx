@@ -83,7 +83,7 @@ export function InputPanel({ input, cursorPos, width, maxVisibleLines, status }:
           <Text color={YOU_COLOR} bold backgroundColor={THEME_BG}>{prefix}</Text>
           <Text inverse>{" "}</Text>
           {isIdle && (
-            <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>
+            <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
               {hint}
             </Text>
           )}

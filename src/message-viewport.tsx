@@ -75,16 +75,16 @@ export function MessageViewport({
 
       {isEmpty && (
         <Box flexDirection="column">
-          <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>
+          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
             {padToWidth("fff ready", width)}
           </Text>
-          <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>
+          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
             {padToWidth("type a prompt and press Enter", width)}
           </Text>
-          <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>
+          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
             {padToWidth("Shift+Enter newline • PgUp/PgDn scroll • Ctrl+O copy • Ctrl+/ undo", width)}
           </Text>
-          <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>
+          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
             {padToWidth(".new start a session • .resume list recent sessions", width)}
           </Text>
         </Box>
@@ -92,7 +92,7 @@ export function MessageViewport({
 
       {!isEmpty && hasMoreAbove && (
         <Box flexDirection="row" height={1}>
-          <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>{padToWidth(`↑ ${linesAbove}`, width)}</Text>
+          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{padToWidth(`↑ ${linesAbove}`, width)}</Text>
         </Box>
       )}
 
@@ -114,7 +114,7 @@ export function MessageViewport({
 
       {isConnecting && clampedScroll === 0 && !isStreaming && (
         <Box flexDirection="row" width={width} overflow="hidden">
-          <Text color={ASSISTANT_COLOR} dimColor backgroundColor={THEME_BG}>{padToWidth("...", width)}</Text>
+          <Text color={ASSISTANT_COLOR} backgroundColor={THEME_BG}>{padToWidth("...", width)}</Text>
         </Box>
       )}
 
@@ -122,7 +122,7 @@ export function MessageViewport({
         <Box flexDirection="column" width={width} overflow="hidden">
           {streamingLines.map((line, index) => (
             <Box key={index} flexDirection="row">
-              <Text color={ASSISTANT_COLOR} dimColor backgroundColor={THEME_BG}>{padToWidth(line + " ", width)}</Text>
+              <Text color={ASSISTANT_COLOR} backgroundColor={THEME_BG}>{padToWidth(line + " ", width)}</Text>
             </Box>
           ))}
         </Box>
@@ -130,13 +130,13 @@ export function MessageViewport({
 
       {isStreaming && clampedScroll > 0 && (
         <Box flexDirection="row" height={1}>
-          <Text color={STATUS_BUSY_COLOR} dimColor backgroundColor={THEME_BG}>{padToWidth("↓ streaming...", width)}</Text>
+          <Text color={STATUS_BUSY_COLOR} backgroundColor={THEME_BG}>{padToWidth("↓ streaming...", width)}</Text>
         </Box>
       )}
 
       {!isEmpty && hasMoreBelow && (
         <Box flexDirection="row" height={1}>
-          <Text color={MUTED_COLOR} dimColor backgroundColor={THEME_BG}>{padToWidth(`↓ ${clampedScroll}`, width)}</Text>
+          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{padToWidth(`↓ ${clampedScroll}`, width)}</Text>
         </Box>
       )}
     </Box>
