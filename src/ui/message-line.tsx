@@ -2,7 +2,6 @@ import React from "react";
 import { Box, Text } from "ink";
 import { extractToolInvocations, type Message } from "../llm/llm";
 import {
-  ASSISTANT_COLOR,
   ERROR_COLOR,
   MUTED_COLOR,
   TEXT_COLOR,
@@ -18,7 +17,6 @@ import {
   formatToolCallArgs,
   parseSegments,
   parseToolDisplay,
-  summarizeToolDisplay,
   wrapText,
 } from "../utils/message-format";
 
@@ -32,7 +30,8 @@ export function getMessageHeight(
   const isParseError = message.content.startsWith("tool_parse_error:");
 
   if (toolDisplay) {
-    if (!expandedSet.has(index)) return 1;
+    // Collapsed tool results render nothing (errors surface on the tool-call line).
+    if (!expandedSet.has(index)) return 0;
     return 1 + wrapText(JSON.stringify(toolDisplay.result, null, 2), width).length;
   }
 
@@ -58,7 +57,28 @@ type MessageLineProps = {
   width: number;
   index: number;
   isExpanded: boolean;
+  messages?: Message[];
 };
+
+// For an assistant message at `index` holding tool invocations, the tool
+// results are the next consecutive UI messages (one per invocation, in order).
+// Returns whether each invocation's result reported an error.
+function getInvocationErrors(
+  messages: Message[] | undefined,
+  index: number,
+  count: number
+): boolean[] {
+  const errors = new Array<boolean>(count).fill(false);
+  if (!messages) return errors;
+  for (let i = 0; i < count; i++) {
+    const result = messages[index + 1 + i];
+    if (!result) break;
+    const display = parseToolDisplay(result.content);
+    if (!display) break;
+    errors[i] = !!(display.result as any)?.error;
+  }
+  return errors;
+}
 
 function getToolAccent(name: string, result?: any) {
   if (result?.error) return TOOL_ERROR_COLOR;
@@ -75,7 +95,7 @@ function getToolAccent(name: string, result?: any) {
   }
 }
 
-export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
+export function MessageLine({ msg, width, index, isExpanded, messages }: MessageLineProps) {
   const toolDisplay = parseToolDisplay(msg.content);
   const isParseError = msg.content.startsWith("tool_parse_error:");
 
@@ -95,13 +115,16 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
   if (msg.role === "assistant") {
     const { invocations } = extractToolInvocations(msg.content);
     if (invocations.length > 0) {
+      const invocationErrors = getInvocationErrors(messages, index, invocations.length);
       return (
         <Box flexDirection="column">
           {invocations.map((invocation, i) => {
-            const accent = getToolAccent(invocation.name);
+            const hasError = invocationErrors[i];
+            const accent = hasError ? TOOL_ERROR_COLOR : getToolAccent(invocation.name);
+            const marker = hasError ? "✗ " : "⚡ ";
             return (
               <Box key={i} flexDirection="row">
-                <Text color={accent} bold>{"⚡ "}</Text>
+                <Text color={accent} bold>{marker}</Text>
                 <Text color={accent} bold>{invocation.name}</Text>
                 <Text color={TOOL_COLOR}>{padToWidth(" " + formatToolCallArgs(invocation), Math.max(0, width - 2 - invocation.name.length))}</Text>
               </Box>
@@ -113,7 +136,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
 
     if (!msg.content) {
       return (
-        <Text color={ASSISTANT_COLOR}>
+        <Text color={TEXT_COLOR}>
           {padToWidth("Thinking...", width)}
         </Text>
       );
@@ -126,7 +149,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
           if (segment.type === "text") {
             const lines = wrapText(segment.content, width);
             return lines.map((line, j) => (
-              <Text key={`${i}-${j}`} color={ASSISTANT_COLOR}>
+              <Text key={`${i}-${j}`} color={TEXT_COLOR}>
                 {padToWidth(line, width)}
               </Text>
             ));
@@ -180,8 +203,9 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
       );
     }
 
-    const summary = summarizeToolDisplay(toolDisplay.name, toolDisplay.result);
-    return <Text color={accent}>{padToWidth(`▸ ${summary}`, width)}</Text>;
+    // Collapsed tool results render nothing: success is implicit, and errors are
+    // signaled by an ✗ marker on the originating ⚡ tool-call line instead.
+    return null;
   }
 
   if (isParseError) {

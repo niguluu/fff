@@ -76,6 +76,7 @@ export function MessageViewport({
             width={width}
             index={visibleStart + index}
             isExpanded={expandedTools.has(visibleStart + index)}
+            messages={messages}
           />
         </Box>
       ))}

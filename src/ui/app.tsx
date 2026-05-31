@@ -93,8 +93,12 @@ export default function App() {
   const inputHeight = promptContentHeight + 2;
   const statusHeight = 1;
   const dividerHeight = 1;
+  const topDividerHeight = 1;
   const tipsHeight = showTips ? 1 : 0;
-  const msgAreaHeight = Math.max(3, termRows - inputHeight - statusHeight - dividerHeight - tipsHeight);
+  const msgAreaHeight = Math.max(
+    3,
+    termRows - inputHeight - statusHeight - dividerHeight - topDividerHeight - tipsHeight
+  );
 
   const viewport = useMemo(
     () =>
@@ -321,6 +325,10 @@ export default function App() {
           streamingText={streamingText}
         />
       )}
+
+      <Box height={topDividerHeight} width={termCols} overflow="hidden">
+        <Text color={SEPARATOR_COLOR}>{"─".repeat(termCols)}</Text>
+      </Box>
 
       <InputPanel
         input={input}
