@@ -183,34 +183,42 @@ bun run dev
 
 ```text
 src/
-  agent-runner.ts         Agent loop orchestration
-  app.tsx                 Top-level state + composition
-  clipboard.ts            Clipboard helper
-  config.ts               Runtime constants + Gruvbox palette
-  conversation.ts         Conversation pruning + token estimation
   index.tsx               CLI entry point (TUI + `index` subcommand, theme/exit)
-  indexer.ts              Codebase indexer (writes codebase-index.yaml)
-  input-editor.ts         Input editing primitives (grapheme-aware backspace/delete)
-  input-panel.tsx         Input rendering (fixed-height prompt box)
-  kill-ring.ts            Emacs-style kill ring (cut/yank)
-  llm.ts                  LLM client, system prompt, tool parsing
-  logger.ts               Per-session agent file logging
-  message-format.ts       Message formatting + concise edit summaries
-  message-line.tsx        Message row rendering
-  message-viewport.tsx    Scrollable message viewport
-  paste.ts                Bracketed-paste normalization + large-paste markers
-  pi-prompt-utils.ts      Visual-line / sticky-column cursor helpers
-  process-registry.ts     Tracks/kills spawned child processes
-  session-store.ts        Session persistence (.new / .resume)
-  text-segmentation.ts    Grapheme/word segmentation helpers (Intl.Segmenter)
-  tools-registry.ts       Tool registry + invocation
-  tools.ts                Filesystem + run_command tool implementations
-  types.ts                Shared type definitions
-  undo-stack.ts           Undo history for the input editor
-  use-alternate-screen.ts Terminal screen hook (no-op; managed in index.tsx)
-  use-app-input.ts        Keyboard input handling (all keybindings)
-  viewport.ts             Viewport/scroll calculations
-  word-navigation.ts      Word-boundary navigation (findWordBackward/Forward)
+  core/
+    agent-runner.ts       Agent loop orchestration
+    config.ts             Runtime constants + Gruvbox palette
+    conversation.ts       Conversation pruning + token estimation
+    indexer.ts            Codebase indexer (writes codebase-index.yaml)
+    process-registry.ts   Tracks/kills spawned child processes
+    session-store.ts      Session persistence (.new / .resume)
+    types.ts              Shared type definitions
+  editor/
+    input-editor.ts       Input editing primitives (grapheme-aware backspace/delete)
+    kill-ring.ts          Emacs-style kill ring (cut/yank)
+    undo-stack.ts         Undo history for the input editor
+    use-app-input.ts      Keyboard input handling (all keybindings)
+  llm/
+    llm.ts                LLM client, system prompt, tool parsing
+  tools/
+    tools-registry.ts     Tool registry + invocation
+    tools.ts              Filesystem + run_command tool implementations
+  ui/
+    app.tsx               Top-level state + composition
+    input-panel.tsx       Input rendering (fixed-height prompt box)
+    message-line.tsx      Message row rendering
+    message-viewport.tsx  Scrollable message viewport
+    theme.tsx             Gruvbox palette + theme constants
+    use-alternate-screen.ts Terminal screen hook (no-op; managed in index.tsx)
+    viewport.ts           Viewport/scroll calculations
+  utils/
+    clipboard.ts          Clipboard helper
+    logger.ts             Per-session agent file logging
+    message-format.ts     Message formatting + concise edit summaries
+    paste.ts              Bracketed-paste normalization + large-paste markers
+    pi-prompt-utils.ts    Visual-line / sticky-column cursor helpers
+    text-segmentation.ts  Grapheme/word segmentation helpers (Intl.Segmenter)
+    version.ts            Version info
+    word-navigation.ts    Word-boundary navigation (findWordBackward/Forward)
 ```
 
 ---
