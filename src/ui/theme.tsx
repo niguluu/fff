@@ -1,13 +1,12 @@
 import React from "react";
 import { Text } from "ink";
-import { THEME_BG } from "../core/config";
 
 export function FillLines({ count, width }: { count: number; width: number }) {
   if (count <= 0) return null;
   return (
     <>
       {Array.from({ length: count }, (_, i) => (
-        <Text key={i} backgroundColor={THEME_BG}>
+        <Text key={i}>
           {" ".repeat(width)}
         </Text>
       ))}
