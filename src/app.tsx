@@ -12,8 +12,11 @@ import { useAlternateScreen } from "./use-alternate-screen.js";
 import { shouldAutoScroll, buildViewportModel } from "./viewport.js";
 import { MessageViewport } from "./message-viewport.js";
 import { InputPanel } from "./input-panel.js";
-import { countVisualLines } from "./pi-prompt-utils.js";
 import { useAppInput } from "./use-app-input.js";
+import { KillRing } from "./kill-ring.js";
+import { UndoStack } from "./undo-stack.js";
+import { PasteStore } from "./paste.js";
+import type { InputEditorState } from "./input-editor.js";
 import type { AppStatus } from "./types.js";
 
 export default function App() {
@@ -36,6 +39,10 @@ export default function App() {
   const historyRef = useRef<string[]>([]);
   const historyIndexRef = useRef(-1);
   const savedInputRef = useRef("");
+  const killRingRef = useRef(new KillRing());
+  const undoStackRef = useRef(new UndoStack<InputEditorState>());
+  const pasteStoreRef = useRef(new PasteStore());
+  const preferredColRef = useRef<number | null>(null);
   const activeRef = useRef(false);
   const streamingRef = useRef("");
   const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -43,10 +50,11 @@ export default function App() {
 
   const termRows = stdout.rows || 24;
   const termCols = stdout.columns || 80;
-  const promptContentWidth = Math.max(1, termCols - 2);
   const promptMaxContentHeight = Math.max(5, Math.floor(termRows * 0.3));
-  const promptVisualLines = countVisualLines(input, promptContentWidth);
-  const inputHeight = Math.min(promptMaxContentHeight, Math.max(1, promptVisualLines)) + 2;
+  // Always reserve the maximum prompt height (content + 2 borders) like pi's
+  // editor, so the message viewport keeps a stable height and does not jump as
+  // the prompt grows/shrinks or while responses stream.
+  const inputHeight = promptMaxContentHeight + 2;
   const statusHeight = 1;
   const msgAreaHeight = Math.max(3, termRows - inputHeight - statusHeight);
 
@@ -127,11 +135,16 @@ export default function App() {
     status,
     msgAreaHeight,
     termCols,
+    promptMaxContentHeight,
     historyRefs: {
       history: historyRef,
       historyIndex: historyIndexRef,
       savedInput: savedInputRef,
     },
+    killRing: killRingRef.current,
+    undoStack: undoStackRef.current,
+    preferredColRef,
+    pasteStore: pasteStoreRef.current,
     setInput,
     setCursorPos,
     setScrollLines,

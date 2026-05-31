@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import type { Message } from "./llm.js";
-import { ASSISTANT_COLOR, MUTED_COLOR, STATUS_BUSY_COLOR, TEXT_COLOR } from "./config.js";
+import { ASSISTANT_COLOR, MUTED_COLOR, STATUS_BUSY_COLOR } from "./config.js";
 import { wrapText } from "./message-format.js";
 
 function getStreamingPreview(text: string, width: number) {
@@ -35,7 +35,9 @@ export function MessageViewport({
   isStreaming,
   streamingText,
 }: MessageViewportProps) {
-  const { visibleMessages, visibleStart, hasMoreAbove, hasMoreBelow, clampedScroll } = viewport;
+  const { visibleMessages, visibleStart, hasMoreAbove, hasMoreBelow, clampedScroll, maxScroll } =
+    viewport;
+  const linesAbove = Math.max(0, maxScroll - clampedScroll);
   const streamingLines = isStreaming ? getStreamingPreview(streamingText, width) : [];
   const isEmpty = messages.length === 0 && !isConnecting && !isStreaming;
 
@@ -56,14 +58,14 @@ export function MessageViewport({
             {"type a prompt and press Enter"}
           </Text>
           <Text color={MUTED_COLOR} dimColor>
-            {"Shift+Enter newline • PgUp/PgDn scroll • Ctrl+Y copy"}
+            {"Shift+Enter newline • PgUp/PgDn scroll • Ctrl+O copy • Ctrl+/ undo"}
           </Text>
         </Box>
       )}
 
       {!isEmpty && hasMoreAbove && (
         <Box flexDirection="row" height={1}>
-          <Text color={MUTED_COLOR} dimColor>{"↑ more above"}</Text>
+          <Text color={MUTED_COLOR} dimColor>{`↑ ${linesAbove}`}</Text>
         </Box>
       )}
 
@@ -94,7 +96,7 @@ export function MessageViewport({
           {streamingLines.map((line, index) => (
             <Box key={index} flexDirection="row">
               <Text color={ASSISTANT_COLOR} dimColor>{line}</Text>
-              {index === streamingLines.length - 1 && <Text color={TEXT_COLOR}>{"█"}</Text>}
+              {index === streamingLines.length - 1 && <Text inverse>{" "}</Text>}
             </Box>
           ))}
         </Box>
@@ -108,7 +110,7 @@ export function MessageViewport({
 
       {!isEmpty && hasMoreBelow && (
         <Box flexDirection="row" height={1}>
-          <Text color={MUTED_COLOR} dimColor>{"↓ newer below"}</Text>
+          <Text color={MUTED_COLOR} dimColor>{`↓ ${clampedScroll}`}</Text>
         </Box>
       )}
     </Box>

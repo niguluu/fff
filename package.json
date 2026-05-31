@@ -1,7 +1,7 @@
 {
   "name": "fff",
   "version": "1.0.0",
-  "description": "AI coding assistant CLI",
+  "description": "fff (fucking fucking fast) — a fast terminal AI coding assistant",
   "main": "src/index.tsx",
   "type": "module",
   "bin": {
@@ -10,7 +10,8 @@
   "scripts": {
     "build": "bun build src/index.tsx --outdir dist --target node",
     "start": "bun run src/index.tsx",
-    "dev": "bun --watch src/index.tsx"
+    "dev": "bun --watch src/index.tsx",
+    "index": "bun run src/index.tsx index"
   },
   "dependencies": {
     "ink": "^4.4.0",

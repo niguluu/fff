@@ -106,6 +106,12 @@ export function summarizeToolDisplay(name: string, result: any): string {
       const path = match ? match[1] : "unknown";
       return `💾 write: ${path}`;
     }
+    case "run_command": {
+      const cmd = result.command ?? "";
+      const code = result.exit_code ?? 0;
+      const status = result.timed_out ? "timeout" : code === 0 ? "ok" : `exit ${code}`;
+      return `⚡ run: ${cmd} (${status})`;
+    }
     default:
       return `🔧 ${name}`;
   }
@@ -122,6 +128,8 @@ export function formatToolCallArgs(invocation: ToolInvocation): string {
       return args?.path ?? "";
     case "atomic_overwrite":
       return args?.filename ?? "";
+    case "run_command":
+      return typeof args === "string" ? args : args?.command ?? "";
     default:
       return "";
   }

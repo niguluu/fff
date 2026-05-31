@@ -3,6 +3,7 @@ import {
   listFilesTool,
   editFileTool,
   atomicOverwriteTool,
+  runCommandTool,
 } from "./tools.js";
 
 const TOOL_REGISTRY = {
@@ -10,6 +11,7 @@ const TOOL_REGISTRY = {
   list_files: listFilesTool,
   edit_file: editFileTool,
   atomic_overwrite: atomicOverwriteTool,
+  run_command: runCommandTool,
 } as const;
 
 type ToolName = keyof typeof TOOL_REGISTRY;
@@ -33,6 +35,12 @@ interface AtomicOverwriteArgs {
   filename?: string;
   new_content?: string;
   newContent?: string;
+}
+
+interface RunCommandArgs {
+  command?: string;
+  timeout_ms?: number;
+  timeoutMs?: number;
 }
 
 const TOOL_ARG_PARSERS: Record<ToolName, (args: unknown) => unknown[]> = {
@@ -63,6 +71,12 @@ const TOOL_ARG_PARSERS: Record<ToolName, (args: unknown) => unknown[]> = {
     }
     const a = args as AtomicOverwriteArgs;
     return [a.filename ?? ".", a.new_content ?? a.newContent ?? ""];
+  },
+  run_command: (args) => {
+    if (typeof args === "string") return [args];
+    const a = args as RunCommandArgs;
+    const timeout = a.timeout_ms ?? a.timeoutMs;
+    return timeout !== undefined ? [a.command ?? "", timeout] : [a.command ?? ""];
   },
 };
 

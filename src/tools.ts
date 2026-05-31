@@ -1,8 +1,17 @@
 import { mkdir, readdir, rename, unlink } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import { homedir } from "node:os";
+import { spawn } from "node:child_process";
+import { logger } from "./logger.js";
+import { registerChild, unregisterChild, killChild } from "./process-registry.js";
 
 const WORKING_DIR = resolve(process.env.WORKING_DIR || process.cwd());
+
+// Default ceiling for a single command. Long-running servers should be started
+// in the background by the model rather than blocking the agent loop.
+const DEFAULT_COMMAND_TIMEOUT_MS = Number(process.env.FFF_COMMAND_TIMEOUT_MS ?? "120000");
+// Cap captured output so a chatty command cannot blow up the conversation.
+const MAX_OUTPUT_CHARS = Number(process.env.FFF_MAX_OUTPUT_CHARS ?? "20000");
 
 export interface ToolMetadata {
   name: string;
@@ -58,7 +67,85 @@ export const TOOL_METADATA: ToolMetadata[] = [
     signature:
       "atomic_overwrite(filename: string, new_content: string) -> {action: string}",
   },
+  {
+    name: "run_command",
+    description:
+      "Runs a shell command from the working directory and returns its output. The command runs in its own process group and is killed (with the whole tree) on timeout or when fff exits, so nothing is left orphaned. Use the optional 'timeout_ms' param for slow commands. Output is captured and truncated. If the command fails (non-zero exit), the result includes exit_code and stderr — stop and report instead of looping.",
+    signature:
+      'run_command(command: string, timeout_ms?: number) -> {command: string, exit_code: number, stdout: string, stderr: string, timed_out?: boolean, truncated?: boolean}',
+  },
 ];
+
+function clampOutput(text: string): { text: string; truncated: boolean } {
+  if (text.length <= MAX_OUTPUT_CHARS) return { text, truncated: false };
+  const head = text.slice(0, MAX_OUTPUT_CHARS);
+  return {
+    text: `${head}\n…[truncated ${text.length - MAX_OUTPUT_CHARS} chars]`,
+    truncated: true,
+  };
+}
+
+export async function runCommandTool(command: string, timeoutMs?: number) {
+  const cmd = (command ?? "").trim();
+  if (!cmd) return { command: "", error: "empty command" };
+
+  const timeout = timeoutMs && timeoutMs > 0 ? timeoutMs : DEFAULT_COMMAND_TIMEOUT_MS;
+  logger.info("run_command", "start", { command: cmd, timeout });
+
+  return await new Promise<Record<string, unknown>>((resolvePromise) => {
+    let stdout = "";
+    let stderr = "";
+    let timedOut = false;
+    let settled = false;
+
+    // detached: own process group so we can kill the whole tree via -pid.
+    const child = spawn(cmd, {
+      cwd: WORKING_DIR,
+      shell: "/bin/bash",
+      detached: true,
+      stdio: ["ignore", "pipe", "pipe"],
+      env: process.env,
+    });
+    registerChild(child);
+
+    const timer = setTimeout(() => {
+      timedOut = true;
+      killChild(child, "SIGTERM");
+      setTimeout(() => killChild(child, "SIGKILL"), 300).unref?.();
+    }, timeout);
+
+    child.stdout?.on("data", (d) => {
+      stdout += d.toString();
+    });
+    child.stderr?.on("data", (d) => {
+      stderr += d.toString();
+    });
+
+    function finish(exitCode: number) {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      unregisterChild(child);
+      const out = clampOutput(stdout);
+      const err = clampOutput(stderr);
+      logger.info("run_command", "end", { command: cmd, exit_code: exitCode, timedOut });
+      resolvePromise({
+        command: cmd,
+        exit_code: exitCode,
+        stdout: out.text,
+        stderr: err.text,
+        ...(timedOut ? { timed_out: true } : {}),
+        ...(out.truncated || err.truncated ? { truncated: true } : {}),
+      });
+    }
+
+    child.on("error", (e) => {
+      logger.error("run_command", "spawn error", { command: cmd, error: e.message });
+      finish(127);
+    });
+    child.on("close", (code) => finish(timedOut ? 124 : code ?? 0));
+  });
+}
 
 export async function readFileTool(filename: string, limit?: number) {
   const fullPath = resolveAbsPath(filename);

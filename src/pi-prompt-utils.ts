@@ -83,13 +83,20 @@ export function getCursorVisualInfo(input: string, cursorPos: number, width: num
   };
 }
 
-export function moveCursorUpVisual(input: string, cursorPos: number, width: number): number {
+export function moveCursorUpVisual(
+  input: string,
+  cursorPos: number,
+  width: number,
+  preferredVisualCol?: number
+): number {
   const { visualLines, cursorCol, visualLineIndex } = getCursorVisualInfo(input, cursorPos, width);
   if (visualLineIndex <= 0) return cursorPos;
 
   const currentVL = visualLines[visualLineIndex]!;
   const targetVL = visualLines[visualLineIndex - 1]!;
-  const visualCol = cursorCol - currentVL.startCol;
+  // Sticky column: prefer the remembered column so moving up then down (or
+  // across short lines) returns to the original column when possible.
+  const visualCol = preferredVisualCol ?? cursorCol - currentVL.startCol;
 
   const lines = input.split("\n");
   const targetLine = lines[targetVL.lineIndex] ?? "";
@@ -104,13 +111,19 @@ export function moveCursorUpVisual(input: string, cursorPos: number, width: numb
   return newPos;
 }
 
-export function moveCursorDownVisual(input: string, cursorPos: number, width: number): number {
+export function moveCursorDownVisual(
+  input: string,
+  cursorPos: number,
+  width: number,
+  preferredVisualCol?: number
+): number {
   const { visualLines, cursorCol, visualLineIndex } = getCursorVisualInfo(input, cursorPos, width);
   if (visualLineIndex >= visualLines.length - 1) return cursorPos;
 
   const currentVL = visualLines[visualLineIndex]!;
   const targetVL = visualLines[visualLineIndex + 1]!;
-  const visualCol = cursorCol - currentVL.startCol;
+  // Sticky column: see moveCursorUpVisual.
+  const visualCol = preferredVisualCol ?? cursorCol - currentVL.startCol;
 
   const lines = input.split("\n");
   const targetLine = lines[targetVL.lineIndex] ?? "";
@@ -131,6 +144,16 @@ export function countVisualLines(input: string, width: number): number {
 
 export function getCursorVisualLineIndex(input: string, cursorPos: number, width: number): number {
   return getCursorVisualInfo(input, cursorPos, width).visualLineIndex;
+}
+
+/**
+ * The cursor's column relative to the start of its current visual (wrapped)
+ * line. Used to seed the sticky `preferredVisualCol` for up/down navigation.
+ */
+export function getCursorVisualCol(input: string, cursorPos: number, width: number): number {
+  const { visualLines, cursorCol, visualLineIndex } = getCursorVisualInfo(input, cursorPos, width);
+  const currentVL = visualLines[visualLineIndex];
+  return currentVL ? cursorCol - currentVL.startCol : cursorCol;
 }
 
 export function getTotalVisualLines(input: string, width: number): number {

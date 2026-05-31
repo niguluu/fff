@@ -6,6 +6,30 @@ Cloned `pi-mono` to `vendor/pi-mono` as reference. Partially ported pi's `Editor
 
 ---
 
+## ✅ Status — Implemented
+
+All items below (1–15) have now been ported. The pi algorithms were extracted and
+re-implemented as plain functions / React state (pi components are **not** reused).
+
+New modules:
+- `src/text-segmentation.ts` — grapheme/word `Intl.Segmenter` helpers, `prev/nextGraphemeBoundary`, `firstGrapheme`.
+- `src/word-navigation.ts` — `findWordBackward` / `findWordForward` (ported).
+- `src/kill-ring.ts` — `KillRing` (ported).
+- `src/undo-stack.ts` — `UndoStack` (ported).
+- `src/paste.ts` — `normalizePaste`, `isLargePaste`, `PasteStore` (paste markers).
+
+Wiring / fixes:
+- `src/input-editor.ts` — grapheme-aware `backspaceText` + `deleteForwardText`; kill ops (`killToLineEnd/Start`, `killWordBackward/Forward`).
+- `src/pi-prompt-utils.ts` — sticky `preferredVisualCol` in up/down moves + `getCursorVisualCol`.
+- `src/use-app-input.ts` — grapheme left/right, word nav (Ctrl/Alt+arrows), kill ring (Ctrl+K/U/W, Alt+Backspace/D), yank (Ctrl+Y), undo (Ctrl+/, Ctrl+_), sticky-column up/down, PageUp/Down paging the prompt on overflow, paste normalization + markers. Copy-assistant rebound from Ctrl+Y → **Ctrl+O**.
+- `src/app.tsx` — constant `inputHeight = promptMaxContentHeight + 2`; KillRing/UndoStack/PasteStore/preferredCol refs.
+- `src/input-panel.tsx` — empty input flows through the normal `visibleLines` pipeline, fixed-height content box, fake cursor always rendered (grapheme-safe).
+- `src/message-viewport.tsx` — inverse-video streaming cursor, minimal dimmed scroll indicators, updated help text.
+
+Verified: `bun run build` succeeds, `tsc` clean for `src/`, and a temporary logic harness asserted 22 cases (grapheme edits, word nav, kill ops, kill ring, undo, sticky-column round-trip, paste) — all passing.
+
+---
+
 ## 🔴 Critical Bugs (Breaking)
 
 ### 1. Prompt Box Disappears / Does Not Render on Empty State

@@ -21,12 +21,69 @@ cleanup() {
 
 trap cleanup EXIT
 
-log "fff installer"
+log "fff installer (fucking fucking fast)"
+
+# ---------------------------------------------------------------------------
+# Toolchain bootstrap: ensure mise + bun are available for new users.
+# Set FFF_SKIP_BOOTSTRAP=1 to skip and require a pre-installed bun.
+# ---------------------------------------------------------------------------
+ensure_path_has() {
+  case ":$PATH:" in
+    *":$1:"*) ;;
+    *) export PATH="$1:$PATH" ;;
+  esac
+}
+
+bootstrap_toolchain() {
+  # Make common install locations visible for this session.
+  ensure_path_has "$HOME/.local/bin"
+  ensure_path_has "$HOME/.local/share/mise/shims"
+  ensure_path_has "$HOME/.bun/bin"
+
+  if command -v bun &>/dev/null; then
+    return 0
+  fi
+
+  log "bun not found — bootstrapping toolchain"
+
+  # Prefer mise to manage bun if available or installable.
+  if ! command -v mise &>/dev/null; then
+    log "Installing mise"
+    if command -v curl &>/dev/null; then
+      curl -fsSL https://mise.run | sh || log "mise install via curl failed; will try direct bun install"
+    fi
+    ensure_path_has "$HOME/.local/bin"
+    ensure_path_has "$HOME/.local/share/mise/shims"
+  fi
+
+  if command -v mise &>/dev/null; then
+    log "Installing bun via mise"
+    mise use -g bun@latest || mise install bun@latest || true
+    eval "$(mise activate bash 2>/dev/null)" || true
+    ensure_path_has "$HOME/.local/share/mise/shims"
+  fi
+
+  # Fallback: official bun installer.
+  if ! command -v bun &>/dev/null; then
+    log "Installing bun via bun.sh"
+    if command -v curl &>/dev/null; then
+      curl -fsSL https://bun.sh/install | bash || true
+    fi
+    ensure_path_has "$HOME/.bun/bin"
+  fi
+}
+
+if [[ "${FFF_SKIP_BOOTSTRAP:-0}" != "1" ]]; then
+  bootstrap_toolchain
+fi
 
 if ! command -v bun &>/dev/null; then
-  echo "Error: bun is not installed. Install it first: https://bun.sh" >&2
+  echo "Error: bun is still not installed after bootstrap." >&2
+  echo "Install it manually (https://bun.sh) or via mise (https://mise.jdx.dev) and re-run." >&2
   exit 1
 fi
+
+log "Using bun: $(command -v bun) ($(bun --version 2>/dev/null || echo unknown))"
 
 SCRIPT_DIR=""
 if [[ -n "${BASH_SOURCE+set}" ]]; then

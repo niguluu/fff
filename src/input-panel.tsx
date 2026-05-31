@@ -1,7 +1,8 @@
 import React, { useMemo } from "react";
 import { Box, Text } from "ink";
-import { BORDER_COLOR, MUTED_COLOR, STATUS_BUSY_COLOR, TEXT_COLOR, YOU_COLOR } from "./config.js";
+import { BORDER_COLOR, MUTED_COLOR, TEXT_COLOR, YOU_COLOR } from "./config.js";
 import { wrapInputToVisualLines } from "./pi-prompt-utils.js";
+import { firstGrapheme } from "./text-segmentation.js";
 
 type InputPanelProps = {
   input: string;
@@ -59,19 +60,38 @@ export function InputPanel({ input, cursorPos, width, termRows, status }: InputP
     line: { text: string; lineIndex: number; isCursorLine: boolean; cursorOffset: number },
     lineIdx: number
   ) {
-    const prefix = line.lineIndex === 0 && lineIdx === 0 ? "> " : "  ";
-    const prefixWidth = prefix.length;
-    const availableWidth = Math.max(0, contentWidth - prefixWidth);
+    const isFirst = line.lineIndex === 0 && lineIdx === 0;
+    const prefix = isFirst ? "> " : "  ";
+    const availableWidth = Math.max(0, contentWidth - prefix.length);
     const displayText = line.text.slice(0, availableWidth);
 
-    if (line.isCursorLine && isIdle) {
-      const beforeCursor = displayText.slice(0, line.cursorOffset);
-      const atCursor = displayText[line.cursorOffset] ?? " ";
-      const afterCursor = displayText.slice(line.cursorOffset + 1);
-
+    // Empty input: render the prompt + fake cursor (and a placeholder hint when
+    // idle) through the same pipeline so the box never collapses.
+    if (isEmpty && isFirst) {
       return (
         <Box flexDirection="row" width={contentWidth} overflow="hidden">
           <Text color={YOU_COLOR} bold>{prefix}</Text>
+          <Text inverse> </Text>
+          {isIdle && (
+            <Text color={MUTED_COLOR} dimColor>
+              {"Ask fff to inspect, edit, debug, or build…"}
+            </Text>
+          )}
+        </Box>
+      );
+    }
+
+    // The fake cursor is always rendered (even while streaming) so the cursor
+    // position never disappears mid-response.
+    if (line.isCursorLine) {
+      const beforeCursor = displayText.slice(0, line.cursorOffset);
+      const rest = displayText.slice(line.cursorOffset);
+      const atCursor = firstGrapheme(rest) ?? " ";
+      const afterCursor = rest.slice(atCursor === " " && rest.length === 0 ? 0 : atCursor.length);
+
+      return (
+        <Box flexDirection="row" width={contentWidth} overflow="hidden">
+          <Text color={isFirst ? YOU_COLOR : MUTED_COLOR} bold={isFirst}>{prefix}</Text>
           <Text color={TEXT_COLOR}>{beforeCursor}</Text>
           <Text inverse>{atCursor}</Text>
           <Text color={TEXT_COLOR}>{afterCursor}</Text>
@@ -81,7 +101,7 @@ export function InputPanel({ input, cursorPos, width, termRows, status }: InputP
 
     return (
       <Box flexDirection="row" width={contentWidth} overflow="hidden">
-        <Text color={line.lineIndex === 0 && lineIdx === 0 ? YOU_COLOR : MUTED_COLOR}>
+        <Text color={isFirst ? YOU_COLOR : MUTED_COLOR}>
           {prefix}
         </Text>
         <Text color={TEXT_COLOR}>{displayText}</Text>
@@ -103,33 +123,15 @@ export function InputPanel({ input, cursorPos, width, termRows, status }: InputP
         )}
       </Box>
 
-      {/* Content lines */}
-      <Box flexDirection="column" width={width} overflow="hidden">
-        {isEmpty && isIdle ? (
-          <Box flexDirection="row" width={width} overflow="hidden">
+      {/* Content lines — empty input flows through the same pipeline so the box
+          never collapses. Height is fixed to reserve maximum prompt space. */}
+      <Box flexDirection="column" width={width} height={maxVisibleLines} overflow="hidden">
+        {visibleLines.map((line, idx) => (
+          <Box key={idx} flexDirection="row" width={width} overflow="hidden">
             <Text>{" ".repeat(PADDING_X)}</Text>
-            <Box flexDirection="row" width={contentWidth} overflow="hidden">
-              <Text color={YOU_COLOR} bold>{"> "}</Text>
-              <Text color={MUTED_COLOR} dimColor>Ask fff to inspect, edit, debug, or build…</Text>
-              <Text inverse> </Text>
-            </Box>
+            {renderLine(line, idx)}
           </Box>
-        ) : isEmpty && !isIdle ? (
-          <Box flexDirection="row" width={width} overflow="hidden">
-            <Text>{" ".repeat(PADDING_X)}</Text>
-            <Box flexDirection="row" width={contentWidth} overflow="hidden">
-              <Text color={YOU_COLOR} bold>{"> "}</Text>
-              <Text color={STATUS_BUSY_COLOR} dimColor>Working…</Text>
-            </Box>
-          </Box>
-        ) : (
-          visibleLines.map((line, idx) => (
-            <Box key={idx} flexDirection="row" width={width} overflow="hidden">
-              <Text>{" ".repeat(PADDING_X)}</Text>
-              {renderLine(line, idx)}
-            </Box>
-          ))
-        )}
+        ))}
       </Box>
 
       {/* Bottom border */}
