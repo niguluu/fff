@@ -11,7 +11,7 @@
     "test:src": "tsx --test test/**/*.test.ts",
     "backend:test": "cargo test --manifest-path rust-server/Cargo.toml",
     "backend:build": "cargo build --manifest-path rust-server/Cargo.toml",
-    "install:toolchain": "./scripts/install.sh",
+    "install:toolchain": "./install.sh",
     "verify": "npm run build && npm run test && npm run backend:test && npm run backend:build"
   },
   "devDependencies": {
