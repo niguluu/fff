@@ -9,7 +9,7 @@ test("default system prompt advertises the configured model", () => {
   assert.match(DEFAULT_SYSTEM_PROMPT, new RegExp(DEFAULT_CONTEXT_WINDOW));
 });
 
-test("renderScreen includes all requested boxes", () => {
+test("renderScreen includes requested sections without prompt box", () => {
   const screen = renderScreen(
     {
       systemPrompt: "system",
@@ -22,8 +22,8 @@ test("renderScreen includes all requested boxes", () => {
 
   assert.match(screen, /System Prompt/);
   assert.match(screen, /Agent Stream/);
-  assert.match(screen, /Prompt/);
-  assert.match(screen, /user prompt/);
+  assert.match(screen, /agent stream/);
+  assert.doesNotMatch(screen, /\n┌─+ Prompt/);
 });
 
 test("parseStreamEvent rejects invalid events", () => {
