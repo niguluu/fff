@@ -26,6 +26,13 @@ if (argv[0] === "index") {
       console.error(`Indexing failed: ${err?.message ?? err}`);
       process.exit(1);
     });
+} else if (argv[0] === "u" || argv[0] === "update") {
+  import("./core/updater")
+    .then(({ runUpdate }) => runUpdate())
+    .catch((err) => {
+      console.error(`Update failed: ${err?.message ?? err}`);
+      process.exit(1);
+    });
 } else {
   void startTui();
 }

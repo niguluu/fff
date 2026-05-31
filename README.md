@@ -121,6 +121,11 @@ Or run it directly from the repo:
 bun run start
 ```
 
+### Updating
+
+Run `fff u` or `fff update` to fetch the latest source from GitHub, rebuild, and
+install it to `~/.fff`. This is the same as re-running the install script.
+
 ---
 
 ## Sessions
