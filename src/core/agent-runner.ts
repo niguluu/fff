@@ -1,9 +1,10 @@
 import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import {
-  executeLLMCall,
   extractToolInvocations,
+  type LLMStreamEvent,
   type Message,
+  streamLLMCall,
 } from "../llm/llm";
 import { MAX_TOOL_ROUNDS } from "./config";
 import { pruneMessages } from "./conversation";
@@ -47,39 +48,38 @@ function withCodebaseIndex(messages: Message[], indexText: string): Message[] {
 export type RunAgentOptions = {
   conversation: Message[];
   userInput: string;
-  onMessage: (message: Message) => void;
+  setMessages: (value: Message[] | ((messages: Message[]) => Message[])) => void;
   onConversationChange: (messages: Message[]) => void;
   onStatusChange: (status: "idle" | "thinking") => void;
   onConnectingChange: (value: boolean) => void;
-  onStreamingChange: (value: boolean) => void;
-  onStreamingTextChange: (value: string) => void;
-  appendStreamingText: (chunk: string) => void;
   onAutoScroll: () => void;
-  streamingRef: { current: string };
-  flushTimerRef: { current: ReturnType<typeof setTimeout> | null };
   isActiveRef: { current: boolean };
-  scheduleFlush: () => void;
-  flushNow: () => void;
+  stream?: (messages: Message[]) => AsyncIterable<LLMStreamEvent>;
 };
 
 export async function runAgent(options: RunAgentOptions) {
   const {
     conversation,
     userInput,
-    onMessage,
+    setMessages,
     onConversationChange,
     onStatusChange,
     onConnectingChange,
-    onStreamingChange,
-    onStreamingTextChange,
-    appendStreamingText,
     onAutoScroll,
-    streamingRef,
-    flushTimerRef,
     isActiveRef,
-    scheduleFlush,
-    flushNow,
+    stream = streamLLMCall,
   } = options;
+
+  const appendMessage = (message: Message) => {
+    setMessages((messages) => [...messages, message]);
+  };
+
+  const replaceLastMessage = (message: Message) => {
+    setMessages((messages) => {
+      if (messages.length === 0) return [message];
+      return [...messages.slice(0, -1), message];
+    });
+  };
 
   if (isActiveRef.current) return conversation;
   isActiveRef.current = true;
@@ -97,7 +97,7 @@ export async function runAgent(options: RunAgentOptions) {
 
   let conv: Message[] = [...conversation, { role: "user", content: userInput }];
   onConversationChange(conv);
-  onMessage({ role: "user", content: userInput });
+  appendMessage({ role: "user", content: userInput });
   onAutoScroll();
   onStatusChange("thinking");
 
@@ -115,39 +115,39 @@ export async function runAgent(options: RunAgentOptions) {
 
     onAutoScroll();
     onConnectingChange(true);
-    onStreamingChange(true);
-    onStreamingTextChange("");
-    streamingRef.current = "";
+    appendMessage({ role: "assistant", content: "" });
 
     let assistantResponse: string;
     try {
       const llmMessages = indexText
         ? withCodebaseIndex(pruneMessages(conv), indexText)
         : pruneMessages(conv);
-      assistantResponse = await executeLLMCall(llmMessages, (chunk) => {
-        streamingRef.current += chunk;
-        scheduleFlush();
-      });
-
-      flushNow();
-      const pending = streamingRef.current;
-      streamingRef.current = "";
-      if (pending) {
-        appendStreamingText(pending);
+      let sawContent = false;
+      assistantResponse = "";
+      for await (const event of stream(llmMessages)) {
+        if (event.type === "start") {
+          continue;
+        }
+        if (event.type === "content") {
+          if (!sawContent) {
+            sawContent = true;
+            onConnectingChange(false);
+          }
+          assistantResponse = event.snapshot;
+          replaceLastMessage({ role: "assistant", content: assistantResponse });
+          onAutoScroll();
+          continue;
+        }
+        assistantResponse = event.content;
+        replaceLastMessage({ role: "assistant", content: assistantResponse });
       }
+
       onConnectingChange(false);
     } catch (error: any) {
-      if (flushTimerRef.current) {
-        clearTimeout(flushTimerRef.current);
-        flushTimerRef.current = null;
-      }
-      streamingRef.current = "";
       onConnectingChange(false);
-      onStreamingTextChange("");
-      onStreamingChange(false);
 
       const errorMsg = `LLM Error: ${error.message ?? String(error)}`;
-      onMessage({ role: "assistant", content: errorMsg });
+      replaceLastMessage({ role: "assistant", content: errorMsg });
       conv = [...conv, { role: "assistant", content: errorMsg }];
       onConversationChange(conv);
       break;
@@ -155,25 +155,22 @@ export async function runAgent(options: RunAgentOptions) {
 
     if (assistantResponse.trim() === "") {
       assistantResponse = "(received empty response from model)";
+      replaceLastMessage({ role: "assistant", content: assistantResponse });
     }
 
-    streamingRef.current = "";
     onConnectingChange(false);
-    onStreamingTextChange("");
-    onStreamingChange(false);
 
     const { invocations, errors } = extractToolInvocations(assistantResponse);
 
     if (errors.length > 0) {
       for (const error of errors) {
         const errMsg = `tool_parse_error: ${error.error} in line: ${error.raw}`;
-        onMessage({ role: "user", content: errMsg });
+        appendMessage({ role: "user", content: errMsg });
         conv = [...conv, { role: "user", content: errMsg }];
         onConversationChange(conv);
       }
     }
 
-    onMessage({ role: "assistant", content: assistantResponse });
     conv = [...conv, { role: "assistant", content: assistantResponse }];
     onConversationChange(conv);
 
@@ -203,7 +200,7 @@ export async function runAgent(options: RunAgentOptions) {
         for (const { invocation: item, response } of responses) {
           conv = [...conv, { role: "user", content: `tool_result(${JSON.stringify(response)})` }];
           onConversationChange(conv);
-          onMessage({
+          appendMessage({
             role: "user",
             content: formatToolResultForDisplay(item.name, response),
           });
@@ -214,7 +211,7 @@ export async function runAgent(options: RunAgentOptions) {
       const response = await executeToolInvocation(invocation.name, invocation.args);
       conv = [...conv, { role: "user", content: `tool_result(${JSON.stringify(response)})` }];
       onConversationChange(conv);
-      onMessage({
+      appendMessage({
         role: "user",
         content: formatToolResultForDisplay(invocation.name, response),
       });

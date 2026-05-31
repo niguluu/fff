@@ -1,9 +1,9 @@
 import React from "react";
 import { Box, Text } from "ink";
 import type { Message } from "../llm/llm";
-import { ASSISTANT_COLOR, MUTED_COLOR, STATUS_BUSY_COLOR } from "../core/config";
+import { MUTED_COLOR } from "../core/config";
 import { FillLines, padToWidth } from "./theme";
-import { getAssistantRenderLines, MessageLine } from "./message-line";
+import { MessageLine } from "./message-line";
 import type { ViewportModel } from "./viewport";
 
 type MessageViewportProps = {
@@ -12,9 +12,6 @@ type MessageViewportProps = {
   messages: Message[];
   viewport: ViewportModel;
   expandedTools: Set<number>;
-  isConnecting: boolean;
-  isStreaming: boolean;
-  streamingText: string;
 };
 
 export function MessageViewport({
@@ -23,26 +20,16 @@ export function MessageViewport({
   messages,
   viewport,
   expandedTools,
-  isConnecting,
-  isStreaming,
-  streamingText,
 }: MessageViewportProps) {
-  const { visibleMessages, visibleStart, hasMoreAbove, hasMoreBelow, clampedScroll, maxScroll } =
-    viewport;
+  const { visibleMessages, visibleStart, hasMoreAbove, hasMoreBelow, clampedScroll, maxScroll } = viewport;
   const linesAbove = Math.max(0, maxScroll - clampedScroll);
-  const streamingLines = isStreaming ? getAssistantRenderLines(streamingText, width) : [];
-  const hasMessages = messages.length > 0 || isConnecting || isStreaming;
-  const visibleStreamingLines =
-    isStreaming && clampedScroll === 0 ? streamingLines.slice(-Math.max(0, height)) : [];
+  const hasMessages = messages.length > 0;
 
   const visibleMessageLines = viewport.messageHeights
     .slice(viewport.visibleStart)
     .reduce((sum, value) => sum + value, 0);
   let usedLines = visibleMessageLines;
   if (hasMessages && hasMoreAbove) usedLines += 1;
-  if (isConnecting && clampedScroll === 0 && !isStreaming) usedLines += 1;
-  if (isStreaming && clampedScroll === 0) usedLines += visibleStreamingLines.length;
-  if (isStreaming && clampedScroll > 0) usedLines += 1;
   if (hasMessages && hasMoreBelow) usedLines += 1;
   const fillCount = Math.max(0, height - usedLines);
 
@@ -82,28 +69,6 @@ export function MessageViewport({
           </Box>
         );
       })}
-
-      {isConnecting && clampedScroll === 0 && !isStreaming && (
-        <Box flexDirection="row" width={width} overflow="hidden">
-          <Text color={ASSISTANT_COLOR}>{padToWidth("...", width)}</Text>
-        </Box>
-      )}
-
-      {isStreaming && clampedScroll === 0 && (
-        <Box flexDirection="column" width={width} overflow="hidden">
-          {visibleStreamingLines.map((line, index) => (
-            <Box key={index} flexDirection="row">
-              <Text color={ASSISTANT_COLOR}>{padToWidth(line, width)}</Text>
-            </Box>
-          ))}
-        </Box>
-      )}
-
-      {isStreaming && clampedScroll > 0 && (
-        <Box flexDirection="row" height={1}>
-          <Text color={STATUS_BUSY_COLOR}>{padToWidth("↓ streaming...", width)}</Text>
-        </Box>
-      )}
 
       {hasMessages && hasMoreBelow && (
         <Box flexDirection="row" height={1}>

@@ -16,6 +16,4 @@ export type InputHistoryState = {
 export type AgentStateRefs = {
   conversation: { current: Message[] };
   isActive: { current: boolean };
-  streaming: { current: string };
-  flushTimer: { current: ReturnType<typeof setTimeout> | null };
 };

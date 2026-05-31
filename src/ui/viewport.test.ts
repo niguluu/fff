@@ -34,27 +34,25 @@ describe("assistant render helpers", () => {
 });
 
 describe("buildViewportModel", () => {
-  test("uses wrapped streaming height instead of a fixed placeholder row", () => {
+  test("uses assistant draft message height directly", () => {
     const model = buildViewportModel({
-      messages: [],
+      messages: [{ role: "assistant", content: "abcdefgh" }],
       termCols: 4,
       msgAreaHeight: 3,
       expandedTools: new Set<number>(),
       scrollLines: 0,
-      isStreaming: true,
-      streamingText: "abcdefgh",
     });
 
-    expect(model.streamingHeight).toBe(2);
     expect(model.totalContentLines).toBe(2);
     expect(model.maxScroll).toBe(0);
   });
 
-  test("keeps newest assistant content visible when streaming adds multiple rows", () => {
+  test("keeps newest assistant content visible when the draft message grows to multiple rows", () => {
     const messages: Message[] = [
       { role: "assistant", content: "one" },
       { role: "assistant", content: "two" },
       { role: "assistant", content: "three" },
+      { role: "assistant", content: "abcdefghijk" },
     ];
 
     const model = buildViewportModel({
@@ -63,11 +61,8 @@ describe("buildViewportModel", () => {
       msgAreaHeight: 3,
       expandedTools: new Set<number>(),
       scrollLines: 0,
-      isStreaming: true,
-      streamingText: "abcdefghijk",
     });
 
-    expect(model.streamingHeight).toBe(2);
     expect(model.visibleMessages).toEqual(messages.slice(2));
     expect(model.visibleStart).toBe(2);
   });

@@ -9,21 +9,72 @@ const TIMEOUT_MS = Number(process.env.LLM_TIMEOUT_MS ?? "60000");
 const TEMPERATURE = Number(process.env.LLM_TEMPERATURE ?? "0.2");
 const MAX_TOKENS = Number(process.env.LLM_MAX_TOKENS ?? "64000");
 
-if (!API_KEY) {
-  throw new Error(
-    "OPENAI_API_KEY environment variable is required. Set it in a .env file or export it."
-  );
-}
-
-const client = new OpenAI({
-  apiKey: API_KEY,
-  baseURL: BASE_URL,
-});
+let defaultClient: LLMClient | null = null;
 
 export type Message = {
   role: "system" | "user" | "assistant";
   content: string;
 };
+
+export type LLMStreamEvent =
+  | { type: "start" }
+  | { type: "content"; delta: string; snapshot: string }
+  | { type: "done"; content: string };
+
+type ChatMessage = {
+  role: "system" | "user" | "assistant";
+  content: string;
+};
+
+type StreamChunk = {
+  choices?: Array<{
+    delta?: { content?: string | null };
+    message?: { content?: string | null };
+  }>;
+};
+
+type CompletionResponse = {
+  choices?: Array<{
+    message?: { content?: string | null };
+  }>;
+};
+
+type ChatCompletionsClient = {
+  create(args: {
+    model: string;
+    max_tokens: number;
+    temperature: number;
+    messages: ChatMessage[];
+    stream?: boolean;
+  }): Promise<AsyncIterable<StreamChunk> | CompletionResponse>;
+};
+
+type LLMClient = {
+  chat: {
+    completions: ChatCompletionsClient;
+  };
+};
+
+type ExecuteLLMDeps = {
+  client?: LLMClient;
+  maxRetries?: number;
+  sleep?: (ms: number) => Promise<void>;
+  timeoutMs?: number;
+};
+
+function getDefaultClient(): LLMClient {
+  if (defaultClient) return defaultClient;
+  if (!API_KEY) {
+    throw new Error(
+      "OPENAI_API_KEY environment variable is required. Set it in a .env file or export it."
+    );
+  }
+  defaultClient = new OpenAI({
+    apiKey: API_KEY,
+    baseURL: BASE_URL,
+  }) as unknown as LLMClient;
+  return defaultClient;
+}
 
 function generateToolDescriptions(): string {
   return TOOL_METADATA.map(
@@ -113,10 +164,7 @@ async function callWithTimeout<T>(fn: () => Promise<T>, ms: number): Promise<T> 
   });
 }
 
-export async function executeLLMCall(
-  messages: Message[],
-  onChunk?: (chunk: string) => void
-): Promise<string> {
+function toChatMessages(messages: Message[]): ChatMessage[] {
   const systemMsg = messages.find((m) => m.role === "system");
   const chatMessages = messages
     .filter((m) => m.role !== "system")
@@ -125,66 +173,100 @@ export async function executeLLMCall(
       content: m.content,
     }));
 
-  const maxRetries = 3;
+  return systemMsg
+    ? [{ role: "system", content: systemMsg.content }, ...chatMessages]
+    : chatMessages;
+}
+
+function getChunkDelta(chunk: StreamChunk): string {
+  return chunk.choices?.[0]?.delta?.content ?? "";
+}
+
+const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+export async function* streamLLMCall(
+  messages: Message[],
+  deps: ExecuteLLMDeps = {}
+): AsyncGenerator<LLMStreamEvent, string> {
+  const chatMessages = toChatMessages(messages);
+  const maxRetries = deps.maxRetries ?? 3;
+  const llmClient = deps.client ?? getDefaultClient();
+  const timeoutMs = deps.timeoutMs ?? TIMEOUT_MS;
+  const wait = deps.sleep ?? sleep;
   let lastErr: unknown;
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      if (onChunk) {
-        const stream = await callWithTimeout(
-          () =>
-            client.chat.completions.create({
-              model: MODEL,
-              max_tokens: MAX_TOKENS,
-              temperature: TEMPERATURE,
-              messages: systemMsg
-                ? [
-                    { role: "system" as const, content: systemMsg.content },
-                    ...chatMessages,
-                  ]
-                : chatMessages,
-              stream: true,
-            }),
-          TIMEOUT_MS
-        );
+    let fullContent = "";
 
-        let fullContent = "";
-        for await (const chunk of stream) {
-          const delta = chunk.choices[0]?.delta?.content ?? "";
-          if (delta) {
-            fullContent += delta;
-            onChunk(delta);
-          }
-        }
-        return fullContent;
-      } else {
-        const resp = await callWithTimeout(
-          () =>
-            client.chat.completions.create({
-              model: MODEL,
-              max_tokens: MAX_TOKENS,
-              temperature: TEMPERATURE,
-              messages: systemMsg
-                ? [
-                    { role: "system" as const, content: systemMsg.content },
-                    ...chatMessages,
-                  ]
-                : chatMessages,
-            }),
-          TIMEOUT_MS
-        );
-        return resp.choices[0]?.message?.content ?? "";
+    try {
+      const stream = (await callWithTimeout(
+        () =>
+          llmClient.chat.completions.create({
+            model: MODEL,
+            max_tokens: MAX_TOKENS,
+            temperature: TEMPERATURE,
+            messages: chatMessages,
+            stream: true,
+          }),
+        timeoutMs
+      )) as AsyncIterable<StreamChunk>;
+
+      yield { type: "start" };
+
+      for await (const chunk of stream) {
+        const delta = getChunkDelta(chunk);
+        if (!delta) continue;
+        fullContent += delta;
+        yield { type: "content", delta, snapshot: fullContent };
       }
+
+      yield { type: "done", content: fullContent };
+      return fullContent;
     } catch (err: any) {
       lastErr = err;
       if (err?.status === 401 || err?.status === 400) throw err;
-      if (attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, 1000 * attempt));
+      const canRetry = attempt < maxRetries && fullContent.length === 0;
+      if (canRetry) {
+        await wait(1000 * attempt);
+        continue;
       }
+      throw err;
     }
   }
 
   throw lastErr;
+}
+
+export async function executeLLMCall(
+  messages: Message[],
+  onChunk?: (chunk: string) => void,
+  deps?: ExecuteLLMDeps
+): Promise<string> {
+  if (onChunk) {
+    let finalContent = "";
+    for await (const event of streamLLMCall(messages, deps)) {
+      if (event.type === "content") {
+        finalContent = event.snapshot;
+        onChunk(event.delta);
+      } else if (event.type === "done") {
+        finalContent = event.content;
+      }
+    }
+    return finalContent;
+  }
+
+  const resp = (await callWithTimeout(
+    () =>
+      (deps?.client ?? getDefaultClient()).chat.completions.create({
+        model: MODEL,
+        max_tokens: MAX_TOKENS,
+        temperature: TEMPERATURE,
+        messages: toChatMessages(messages),
+      }),
+    deps?.timeoutMs ?? TIMEOUT_MS
+  )) as CompletionResponse;
+
+  return resp.choices?.[0]?.message?.content ?? "";
 }
 
 export type ToolInvocation = { name: string; args: unknown };

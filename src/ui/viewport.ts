@@ -1,5 +1,5 @@
 import type { Message } from "../llm/llm";
-import { getAssistantRenderLines, getMessageHeight } from "./message-line";
+import { getMessageHeight } from "./message-line";
 
 export type ViewportModel = {
   messageHeights: number[];
@@ -10,7 +10,6 @@ export type ViewportModel = {
   visibleMessages: Message[];
   hasMoreAbove: boolean;
   hasMoreBelow: boolean;
-  streamingHeight: number;
 };
 
 export function buildViewportModel(args: {
@@ -19,29 +18,18 @@ export function buildViewportModel(args: {
   msgAreaHeight: number;
   expandedTools: Set<number>;
   scrollLines: number;
-  isStreaming: boolean;
-  streamingText: string;
 }): ViewportModel {
-  const {
-    messages,
-    termCols,
-    msgAreaHeight,
-    expandedTools,
-    scrollLines,
-    isStreaming,
-    streamingText,
-  } = args;
+  const { messages, termCols, msgAreaHeight, expandedTools, scrollLines } = args;
 
   const messageHeights = messages.map((message, index) =>
     getMessageHeight(message, termCols, expandedTools, index)
   );
-  const streamingHeight = isStreaming ? getAssistantRenderLines(streamingText, termCols).length : 0;
-  const totalContentLines = messageHeights.reduce((sum, value) => sum + value, 0) + streamingHeight;
+  const totalContentLines = messageHeights.reduce((sum, value) => sum + value, 0);
   const maxScroll = Math.max(0, totalContentLines - msgAreaHeight);
   const clampedScroll = Math.min(scrollLines, maxScroll);
 
   const targetLines = msgAreaHeight + clampedScroll;
-  let consumedLines = streamingHeight;
+  let consumedLines = 0;
   let visibleStart = 0;
 
   for (let i = messages.length - 1; i >= 0; i--) {
@@ -61,7 +49,6 @@ export function buildViewportModel(args: {
     visibleMessages: messages.slice(visibleStart),
     hasMoreAbove: clampedScroll < maxScroll,
     hasMoreBelow: clampedScroll > 0,
-    streamingHeight,
   };
 }
 

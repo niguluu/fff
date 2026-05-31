@@ -41,8 +41,6 @@ export default function App() {
   useAlternateScreen();
 
   const [messages, setMessages] = useState<Message[]>([]);
-  const [streamingText, setStreamingText] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
   const [input, setInput] = useState("");
   const [status, setStatus] = useState<AppStatus>("idle");
@@ -63,8 +61,6 @@ export default function App() {
   const pasteStoreRef = useRef(new PasteStore());
   const preferredColRef = useRef<number | null>(null);
   const activeRef = useRef(false);
-  const streamingRef = useRef("");
-  const flushTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copyTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [updateAvailable, setUpdateAvailable] = useState<string | null>(null);
 
@@ -94,7 +90,7 @@ export default function App() {
     };
   }, [stdout]);
 
-  const showTips = messages.length === 0 && !isConnecting && !isStreaming;
+  const showTips = messages.length === 0 && !isConnecting && status === "idle";
 
   const promptMaxContentHeight = Math.min(8, Math.max(3, Math.floor(termRows * 0.2)));
   const promptContentWidth = Math.max(1, termCols - 2);
@@ -123,34 +119,9 @@ export default function App() {
         msgAreaHeight,
         expandedTools,
         scrollLines,
-        isStreaming,
-        streamingText,
       }),
-    [messages, termCols, msgAreaHeight, expandedTools, scrollLines, isStreaming, streamingText]
+    [messages, termCols, msgAreaHeight, expandedTools, scrollLines]
   );
-
-  const flushNow = useCallback(() => {
-    if (flushTimerRef.current) {
-      clearTimeout(flushTimerRef.current);
-      flushTimerRef.current = null;
-    }
-    const pending = streamingRef.current;
-    if (!pending) return;
-    streamingRef.current = "";
-    setStreamingText((prev) => prev + pending);
-  }, []);
-
-  const scheduleFlush = useCallback(() => {
-    if (flushTimerRef.current) return;
-    flushTimerRef.current = setTimeout(() => {
-      flushNow();
-    }, 32);
-  }, [flushNow]);
-
-  const appendMessage = useCallback((message: Message) => {
-    setMessages((prev) => [...prev, message]);
-    setScrollLines((prev) => (shouldAutoScroll(prev) ? 0 : prev));
-  }, []);
 
   const clearCopyFeedbackLater = useCallback(() => {
     if (copyTimerRef.current) clearTimeout(copyTimerRef.current);
@@ -182,7 +153,6 @@ export default function App() {
 
   const startNewSession = useCallback(() => {
     setMessages([]);
-    setStreamingText("");
     setScrollLines(0);
     setExpandedTools(new Set());
     convRef.current = [{ role: "system", content: SYSTEM_PROMPT }];
@@ -242,31 +212,19 @@ export default function App() {
     void runAgent({
       conversation: convRef.current,
       userInput: text,
-      onMessage: appendMessage,
+      setMessages,
       onConversationChange: (conversation) => {
         convRef.current = conversation;
         setContextTokens(estimateTokens(conversation));
       },
       onStatusChange: setStatus,
       onConnectingChange: setIsConnecting,
-      onStreamingChange: setIsStreaming,
-      onStreamingTextChange: (value) => {
-        streamingRef.current = "";
-        setStreamingText(value);
-      },
-      appendStreamingText: (chunk) => {
-        setStreamingText((prev) => prev + chunk);
-      },
       onAutoScroll: () => {
         setScrollLines((prev) => (shouldAutoScroll(prev) ? 0 : prev));
       },
-      streamingRef,
-      flushTimerRef,
       isActiveRef: activeRef,
-      scheduleFlush,
-      flushNow,
     });
-  }, [appendMessage, scheduleFlush, sessionPicker, startNewSession, loadSessionIntoState, showFeedback]);
+  }, [sessionPicker, startNewSession, loadSessionIntoState, showFeedback]);
 
   useAppInput({
     exit,
@@ -344,9 +302,6 @@ export default function App() {
             messages={messages}
             viewport={viewport}
             expandedTools={expandedTools}
-            isConnecting={isConnecting}
-            isStreaming={isStreaming}
-            streamingText={streamingText}
           />
         )}
       </Box>
