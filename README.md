@@ -96,7 +96,7 @@ Set environment variables in `~/.fff/.env`:
 ```bash
 OPENAI_API_KEY=your_key_here
 OPENAI_BASE_URL=https://api.deepseek.com/v1
-OPENAI_MODEL=deepseek-v4-flash
+OPENAI_MODEL=deepseek-chat
 
 # Optional tuning
 MAX_TOOL_ROUNDS=100            # safety cap on agent tool rounds
@@ -188,36 +188,74 @@ bun run dev
 
 ```text
 src/
-  index.tsx               CLI entry point (TUI + `index` subcommand, theme/exit)
-  agent-runner.ts         Agent loop orchestration
-  app.tsx                 Top-level state + composition
-  clipboard.ts            Clipboard helper
-  config.ts               Runtime constants + Gruvbox palette
-  conversation.ts         Conversation pruning + token estimation
-  indexer.ts              Codebase indexer (writes codebase-index.yaml)
-  input-editor.ts         Input editing primitives (grapheme-aware backspace/delete)
-  input-panel.tsx         Input rendering (fixed-height prompt box)
-  kill-ring.ts            Emacs-style kill ring (cut/yank)
-  llm.ts                  LLM client, system prompt, tool parsing
-  logger.ts               Per-session agent file logging
-  message-format.ts       Message formatting + concise edit summaries
-  message-line.tsx        Message row rendering
-  message-viewport.tsx    Scrollable message viewport
-  paste.ts                Bracketed-paste normalization + large-paste markers
-  pi-prompt-utils.ts      Visual-line / sticky-column cursor helpers
-  process-registry.ts     Tracks/kills spawned child processes
-  session-store.ts        Session persistence (.new / .resume)
-  text-segmentation.ts    Grapheme/word segmentation helpers (Intl.Segmenter)
-  theme.tsx               Gruvbox palette + theme constants
-  tools-registry.ts       Tool registry + invocation
-  tools.ts                Filesystem + run_command tool implementations
-  types.ts                Shared type definitions
-  undo-stack.ts           Undo history for the input editor
-  use-alternate-screen.ts Terminal screen hook (no-op; managed in index.tsx)
-  use-app-input.ts        Keyboard input handling (all keybindings)
-  version.ts              Version info
-  viewport.ts             Viewport/scroll calculations
-  word-navigation.ts      Word-boundary navigation (findWordBackward/Forward)
+  index.tsx                 CLI entry point (TUI + `index` subcommand, theme/exit)
+
+  config/
+    settings.ts             Runtime settings + environment variable loading
+
+  core/
+    agent-runner.ts         Agent loop orchestration
+    config.ts               Gruvbox palette + runtime constants
+    conversation.ts         Conversation pruning + token estimation
+    indexer.ts              Codebase indexer (writes codebase-index.yaml)
+    process-registry.ts     Tracks/kills spawned child processes
+    session-store.ts        Session persistence (.new / .resume)
+    types.ts                Shared type definitions
+    updater.ts              Self-update logic (`fff update`)
+
+  editor/
+    input-editor.ts         Input editing primitives (grapheme-aware backspace/delete)
+    kill-ring.ts            Emacs-style kill ring (cut/yank)
+    undo-stack.ts           Undo history for the input editor
+    use-app-input.ts        Keyboard input handling (all keybindings)
+
+  llm/
+    llm.ts                  LLM client, system prompt, tool parsing
+
+  modes/
+    theme/
+      theme.ts              Theme mode helpers
+
+  shims/
+    pi-tui.ts               Compatibility shims for pi TUI
+
+  tools/
+    render-utils.ts         Tool result rendering helpers
+    tools-registry.ts       Tool registry + invocation
+    tools.ts                Filesystem + run_command tool implementations
+
+  tui/
+    code-cell.ts            Code cell rendering
+    file-list.ts            File list rendering
+    hyperlink.ts            Hyperlink rendering
+    index.ts                TUI entry / exports
+    output-block.ts         Output block rendering
+    status-line.ts          Status bar rendering
+    tree-list.ts            Tree list rendering
+    types.ts                TUI-specific types
+    utils.ts                TUI utilities
+
+  ui/
+    app.tsx                 Top-level state + composition
+    input-panel.tsx         Input rendering (fixed-height prompt box)
+    message-line.tsx        Message row rendering
+    message-viewport.tsx    Scrollable message viewport
+    theme.tsx               Gruvbox palette + theme constants (Ink component)
+    use-alternate-screen.ts Terminal screen hook (no-op; managed in index.tsx)
+    viewport.ts             Viewport/scroll calculations
+    viewport.test.ts        Viewport tests
+
+  utils/
+    clipboard.ts            Clipboard helper
+    color.ts                Color utilities
+    logger.ts               Per-session agent file logging
+    message-format.ts       Message formatting + concise edit summaries
+    paste.ts                Bracketed-paste normalization + large-paste markers
+    pi-prompt-utils.ts      Visual-line / sticky-column cursor helpers
+    sixel.ts                Sixel image support
+    text-segmentation.ts    Grapheme/word segmentation helpers (Intl.Segmenter)
+    version.ts              Version info
+    word-navigation.ts      Word-boundary navigation (findWordBackward/Forward)
 ```
 
 ---

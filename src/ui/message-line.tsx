@@ -25,9 +25,18 @@ type AssistantRenderLine = {
   text: string;
 };
 
-function buildAssistantRenderLines(content: string, width: number): AssistantRenderLine[] {
-  if (!content) return [{ color: TEXT_COLOR, text: "Thinking..." }];
+type AssistantDisplayPart =
+  | { type: "text"; content: string }
+  | { type: "tool"; invocation: ReturnType<typeof extractToolInvocations>["invocations"][number] }
+  | { type: "pending-tool" };
 
+function appendTextPart(parts: AssistantDisplayPart[], textLines: string[]) {
+  if (textLines.length === 0) return;
+  parts.push({ type: "text", content: textLines.join("\n") });
+  textLines.length = 0;
+}
+
+function buildTextRenderLines(content: string, width: number): AssistantRenderLine[] {
   const lines: AssistantRenderLine[] = [];
   for (const segment of parseSegments(content)) {
     if (segment.type === "text") {
@@ -57,6 +66,76 @@ function buildAssistantRenderLines(content: string, width: number): AssistantRen
         text: ` ${text}`,
       }))
     );
+  }
+  return lines;
+};
+
+function getAssistantDisplayParts(content: string): AssistantDisplayPart[] {
+  if (!content) return [];
+
+  const endsWithNewline = content.endsWith("\n");
+  const rawLines = content.split("\n");
+  const completeLineCount = endsWithNewline ? rawLines.length : Math.max(0, rawLines.length - 1);
+  const parts: AssistantDisplayPart[] = [];
+  const textLines: string[] = [];
+
+  for (let i = 0; i < completeLineCount; i++) {
+    const line = rawLines[i] ?? "";
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("tool:")) {
+      textLines.push(line);
+      continue;
+    }
+
+    const { invocations } = extractToolInvocations(trimmed);
+    if (invocations.length > 0) {
+      appendTextPart(parts, textLines);
+      for (const invocation of invocations) {
+        parts.push({ type: "tool", invocation });
+      }
+      continue;
+    }
+
+    textLines.push(line);
+  }
+
+  const pendingLine = endsWithNewline ? "" : (rawLines.at(-1) ?? "");
+  const trimmedPendingLine = pendingLine.trimStart();
+  const hasPendingToolInvocation = trimmedPendingLine.startsWith("tool:");
+  if (pendingLine && !hasPendingToolInvocation) {
+    textLines.push(pendingLine);
+  }
+  appendTextPart(parts, textLines);
+  if (hasPendingToolInvocation) {
+    parts.push({ type: "pending-tool" });
+  }
+
+  return parts;
+}
+
+function buildAssistantRenderLines(content: string, width: number): AssistantRenderLine[] {
+  const parts = getAssistantDisplayParts(content);
+  if (parts.length === 0) {
+    return [{ color: TEXT_COLOR, text: "Thinking..." }];
+  }
+
+  const lines: AssistantRenderLine[] = [];
+  for (const part of parts) {
+    if (part.type === "text") {
+      lines.push(...buildTextRenderLines(part.content, width));
+      continue;
+    }
+
+    if (part.type === "tool") {
+      const toolLine = `⚡ ${part.invocation.name} ${formatToolCallArgs(part.invocation)}`.trimEnd();
+      const wrapped = wrapText(toolLine, width);
+      lines.push(
+        ...(wrapped.length ? wrapped : [""]).map((text) => ({ color: TOOL_COLOR, text }))
+      );
+      continue;
+    }
+
+    lines.push({ color: TOOL_COLOR, text: "⚡ running tool…" });
   }
 
   return lines.length > 0 ? lines : [{ color: TEXT_COLOR, text: "" }];

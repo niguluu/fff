@@ -8,6 +8,21 @@ describe("assistant render helpers", () => {
     expect(getAssistantRenderLines("abcdef", 3)).toEqual(["abc", "def"]);
   });
 
+  test("hides raw streamed tool protocol and replaces it with compact tool status", () => {
+    expect(
+      getAssistantRenderLines(
+        'Plan first\ntool: read_file({"filename":"/tmp/demo.txt"})\nDone',
+        80
+      )
+    ).toEqual(["Plan first", "⚡ read_file /tmp/demo.txt", "Done"]);
+  });
+
+  test("hides partial streamed tool protocol while invocation is still being generated", () => {
+    expect(getAssistantRenderLines('tool: read_file({"filename":"/tmp', 80)).toEqual([
+      "⚡ running tool…",
+    ]);
+  });
+
   test("counts collapsed tool results as zero height", () => {
     const message: Message = {
       role: "user",
