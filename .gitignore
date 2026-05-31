@@ -7,3 +7,4 @@ fff
 node_modules/
 dist/
 build/
+vendor/

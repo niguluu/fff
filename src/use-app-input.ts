@@ -5,14 +5,18 @@ import { copyToClipboard } from "./clipboard.js";
 import {
   backspaceText,
   insertText,
-  moveCursorDown,
   moveCursorToLineEnd,
   moveCursorToLineStart,
-  moveCursorUp,
   navigateHistoryDown,
   navigateHistoryUp,
   type InputHistoryRefs,
 } from "./input-editor.js";
+import {
+  getCursorVisualLineIndex,
+  getTotalVisualLines,
+  moveCursorDownVisual,
+  moveCursorUpVisual,
+} from "./pi-prompt-utils.js";
 
 type UseAppInputArgs = {
   exit: () => void;
@@ -21,6 +25,7 @@ type UseAppInputArgs = {
   cursorPos: number;
   status: "idle" | "thinking";
   msgAreaHeight: number;
+  termCols: number;
   historyRefs: InputHistoryRefs;
   setInput: (value: string) => void;
   setCursorPos: (value: number | ((prev: number) => number)) => void;
@@ -39,6 +44,7 @@ export function useAppInput(args: UseAppInputArgs) {
     cursorPos,
     status,
     msgAreaHeight,
+    termCols,
     historyRefs,
     setInput,
     setCursorPos,
@@ -48,6 +54,8 @@ export function useAppInput(args: UseAppInputArgs) {
     clearCopyFeedbackLater,
     onSubmit,
   } = args;
+
+  const promptContentWidth = Math.max(1, termCols - 2);
 
   useInput((char, key) => {
     if ((key.ctrl && char === "c") || key.escape) {
@@ -136,9 +144,9 @@ export function useAppInput(args: UseAppInputArgs) {
     }
 
     if (key.upArrow) {
-      const multiLineTarget = moveCursorUp(input, cursorPos);
-      if (multiLineTarget !== cursorPos) {
-        setCursorPos(multiLineTarget);
+      const visualLine = getCursorVisualLineIndex(input, cursorPos, promptContentWidth);
+      if (visualLine > 0) {
+        setCursorPos(moveCursorUpVisual(input, cursorPos, promptContentWidth));
         return;
       }
       const historyState = navigateHistoryUp({ input, cursorPos }, historyRefs);
@@ -150,9 +158,10 @@ export function useAppInput(args: UseAppInputArgs) {
     }
 
     if (key.downArrow) {
-      const multiLineTarget = moveCursorDown(input, cursorPos);
-      if (multiLineTarget !== cursorPos) {
-        setCursorPos(multiLineTarget);
+      const visualLine = getCursorVisualLineIndex(input, cursorPos, promptContentWidth);
+      const totalLines = getTotalVisualLines(input, promptContentWidth);
+      if (visualLine < totalLines - 1) {
+        setCursorPos(moveCursorDownVisual(input, cursorPos, promptContentWidth));
         return;
       }
       const historyState = navigateHistoryDown(historyRefs);

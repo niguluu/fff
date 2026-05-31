@@ -12,6 +12,7 @@ import { useAlternateScreen } from "./use-alternate-screen.js";
 import { shouldAutoScroll, buildViewportModel } from "./viewport.js";
 import { MessageViewport } from "./message-viewport.js";
 import { InputPanel } from "./input-panel.js";
+import { countVisualLines } from "./pi-prompt-utils.js";
 import { useAppInput } from "./use-app-input.js";
 import type { AppStatus } from "./types.js";
 
@@ -42,7 +43,10 @@ export default function App() {
 
   const termRows = stdout.rows || 24;
   const termCols = stdout.columns || 80;
-  const inputHeight = input.split("\n").length;
+  const promptContentWidth = Math.max(1, termCols - 2);
+  const promptMaxContentHeight = Math.max(5, Math.floor(termRows * 0.3));
+  const promptVisualLines = countVisualLines(input, promptContentWidth);
+  const inputHeight = Math.min(promptMaxContentHeight, Math.max(1, promptVisualLines)) + 2;
   const statusHeight = 1;
   const msgAreaHeight = Math.max(3, termRows - inputHeight - statusHeight);
 
@@ -122,6 +126,7 @@ export default function App() {
     cursorPos,
     status,
     msgAreaHeight,
+    termCols,
     historyRefs: {
       history: historyRef,
       historyIndex: historyIndexRef,
@@ -151,7 +156,7 @@ export default function App() {
         streamingText={streamingText}
       />
 
-      <InputPanel input={input} cursorPos={cursorPos} width={termCols} status={status} />
+      <InputPanel input={input} cursorPos={cursorPos} width={termCols} termRows={termRows} status={status} />
 
       <Box height={statusHeight} flexDirection="row" width={termCols} overflow="hidden">
         <Text color={MUTED_COLOR} dimColor>
