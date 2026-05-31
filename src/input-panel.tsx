@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
 import { Box, Text } from "ink";
-import { MUTED_COLOR, TEXT_COLOR, THEME_BG, YOU_COLOR } from "./config.js";
+import { MUTED_COLOR, TEXT_COLOR, YOU_COLOR } from "./config.js";
 import { wrapInputToVisualLines } from "./pi-prompt-utils.js";
 import { firstGrapheme } from "./text-segmentation.js";
 import { FillLines } from "./theme.js";
@@ -72,15 +72,15 @@ export function InputPanel({ input, cursorPos, width, maxVisibleLines, status }:
       const hint = isIdle ? "Ask fff to inspect, edit, debug, or build…" : "";
       return (
         <Box flexDirection="row" width={width} overflow="hidden">
-          <Text backgroundColor={THEME_BG}>{leading}</Text>
-          <Text color={YOU_COLOR} bold backgroundColor={THEME_BG}>{prefix}</Text>
+          <Text>{leading}</Text>
+          <Text color={YOU_COLOR} bold>{prefix}</Text>
           <Text inverse>{" "}</Text>
           {isIdle && (
-            <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
+            <Text color={MUTED_COLOR}>
               {hint}
             </Text>
           )}
-          <Text backgroundColor={THEME_BG}>{fill(1 + hint.length)}</Text>
+          <Text>{fill(1 + hint.length)}</Text>
         </Box>
       );
     }
@@ -95,24 +95,24 @@ export function InputPanel({ input, cursorPos, width, maxVisibleLines, status }:
 
       return (
         <Box flexDirection="row" width={width} overflow="hidden">
-          <Text backgroundColor={THEME_BG}>{leading}</Text>
-          <Text color={isFirst ? YOU_COLOR : MUTED_COLOR} bold={isFirst} backgroundColor={THEME_BG}>{prefix}</Text>
-          <Text color={TEXT_COLOR} backgroundColor={THEME_BG}>{beforeCursor}</Text>
+          <Text>{leading}</Text>
+          <Text color={isFirst ? YOU_COLOR : MUTED_COLOR} bold={isFirst}>{prefix}</Text>
+          <Text color={TEXT_COLOR}>{beforeCursor}</Text>
           <Text inverse>{atCursor}</Text>
-          <Text color={TEXT_COLOR} backgroundColor={THEME_BG}>{afterCursor}</Text>
-          <Text backgroundColor={THEME_BG}>{fill(beforeCursor.length + 1 + afterCursor.length)}</Text>
+          <Text color={TEXT_COLOR}>{afterCursor}</Text>
+          <Text>{fill(beforeCursor.length + 1 + afterCursor.length)}</Text>
         </Box>
       );
     }
 
     return (
       <Box flexDirection="row" width={width} overflow="hidden">
-        <Text backgroundColor={THEME_BG}>{leading}</Text>
-        <Text color={isFirst ? YOU_COLOR : MUTED_COLOR} backgroundColor={THEME_BG}>
+        <Text>{leading}</Text>
+        <Text color={isFirst ? YOU_COLOR : MUTED_COLOR}>
           {prefix}
         </Text>
-        <Text color={TEXT_COLOR} backgroundColor={THEME_BG}>{displayText}</Text>
-        <Text backgroundColor={THEME_BG}>{fill(displayText.length)}</Text>
+        <Text color={TEXT_COLOR}>{displayText}</Text>
+        <Text>{fill(displayText.length)}</Text>
       </Box>
     );
   }

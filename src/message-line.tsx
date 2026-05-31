@@ -11,7 +11,6 @@ import {
   TOOL_LIST_COLOR,
   TOOL_READ_COLOR,
   TOOL_WRITE_COLOR,
-  THEME_BG,
   YOU_COLOR,
 } from "./config.js";
 import { padToWidth } from "./theme.js";
@@ -85,7 +84,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
     return (
       <Box flexDirection="column">
         {lines.map((line, i) => (
-          <Text key={i} color={YOU_COLOR} backgroundColor={THEME_BG}>
+          <Text key={i} color={YOU_COLOR}>
             {padToWidth(line, width)}
           </Text>
         ))}
@@ -102,9 +101,9 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
             const accent = getToolAccent(invocation.name);
             return (
               <Box key={i} flexDirection="row">
-                <Text color={accent} bold backgroundColor={THEME_BG}>{"⚡ "}</Text>
-                <Text color={accent} bold backgroundColor={THEME_BG}>{invocation.name}</Text>
-                <Text color={TOOL_COLOR} backgroundColor={THEME_BG}>{padToWidth(" " + formatToolCallArgs(invocation), Math.max(0, width - 2 - invocation.name.length))}</Text>
+                <Text color={accent} bold>{"⚡ "}</Text>
+                <Text color={accent} bold>{invocation.name}</Text>
+                <Text color={TOOL_COLOR}>{padToWidth(" " + formatToolCallArgs(invocation), Math.max(0, width - 2 - invocation.name.length))}</Text>
               </Box>
             );
           })}
@@ -114,7 +113,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
 
     if (!msg.content) {
       return (
-        <Text color={ASSISTANT_COLOR} backgroundColor={THEME_BG}>
+        <Text color={ASSISTANT_COLOR}>
           {padToWidth("Thinking...", width)}
         </Text>
       );
@@ -127,7 +126,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
           if (segment.type === "text") {
             const lines = wrapText(segment.content, width);
             return lines.map((line, j) => (
-              <Text key={`${i}-${j}`} color={ASSISTANT_COLOR} backgroundColor={THEME_BG}>
+              <Text key={`${i}-${j}`} color={ASSISTANT_COLOR}>
                 {padToWidth(line, width)}
               </Text>
             ));
@@ -137,11 +136,11 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
             const lines = wrapText(segment.content, width - 1);
             return (
               <Box key={i} flexDirection="column">
-                <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
+                <Text color={MUTED_COLOR}>
                   {padToWidth(" [thinking]", width)}
                 </Text>
                 {lines.map((line, j) => (
-                  <Text key={`${i}-${j}`} color={MUTED_COLOR} backgroundColor={THEME_BG}>
+                  <Text key={`${i}-${j}`} color={MUTED_COLOR}>
                     {padToWidth(" " + line, width)}
                   </Text>
                 ))}
@@ -153,7 +152,7 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
           return (
             <Box key={i} flexDirection="column">
               {lines.map((line, j) => (
-                <Text key={`${i}-${j}`} color={TEXT_COLOR} backgroundColor={THEME_BG}>
+                <Text key={`${i}-${j}`} color={TEXT_COLOR}>
                   {padToWidth(" " + line, width)}
                 </Text>
               ))}
@@ -171,9 +170,9 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
       const lines = wrapText(raw, width);
       return (
         <Box flexDirection="column">
-          <Text color={accent} bold backgroundColor={THEME_BG}>{padToWidth(`▾ ${toolDisplay.name}`, width)}</Text>
+          <Text color={accent} bold>{padToWidth(`▾ ${toolDisplay.name}`, width)}</Text>
           {lines.map((line, i) => (
-            <Text key={i} color={TOOL_COLOR} backgroundColor={THEME_BG}>
+            <Text key={i} color={TOOL_COLOR}>
               {padToWidth(line, width)}
             </Text>
           ))}
@@ -182,12 +181,12 @@ export function MessageLine({ msg, width, isExpanded }: MessageLineProps) {
     }
 
     const summary = summarizeToolDisplay(toolDisplay.name, toolDisplay.result);
-    return <Text color={accent} backgroundColor={THEME_BG}>{padToWidth(`▸ ${summary}`, width)}</Text>;
+    return <Text color={accent}>{padToWidth(`▸ ${summary}`, width)}</Text>;
   }
 
   if (isParseError) {
     return (
-      <Text color={ERROR_COLOR} backgroundColor={THEME_BG}>
+      <Text color={ERROR_COLOR}>
         {padToWidth("Parse Error: " + msg.content.slice("tool_parse_error: ".length), width)}
       </Text>
     );

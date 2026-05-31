@@ -1,6 +1,5 @@
 import React from "react";
 import { Box, Text } from "ink";
-import { THEME_BG } from "./config.js";
 
 /**
  * Pad a plain-text line with trailing spaces so it spans exactly `width`
@@ -35,7 +34,7 @@ export function FillLines({ count, width }: { count: number; width: number }) {
   return (
     <Box flexDirection="column" width={width} flexShrink={0}>
       {Array.from({ length: count }, (_, i) => (
-        <Text key={i} backgroundColor={THEME_BG}>
+        <Text key={i}>
           {blank}
         </Text>
       ))}

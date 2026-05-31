@@ -1,7 +1,7 @@
 import React from "react";
 import { Box, Text } from "ink";
 import type { Message } from "./llm.js";
-import { ASSISTANT_COLOR, MUTED_COLOR, STATUS_BUSY_COLOR, THEME_BG } from "./config.js";
+import { ASSISTANT_COLOR, MUTED_COLOR, STATUS_BUSY_COLOR } from "./config.js";
 import { FillLines, padToWidth } from "./theme.js";
 
 // While the agent works we deliberately HIDE its raw streaming/tool output.
@@ -40,7 +40,7 @@ export function MessageViewport({
     viewport;
   const linesAbove = Math.max(0, maxScroll - clampedScroll);
   const streamingLines = isStreaming ? getStreamingPreview() : [];
-  const isEmpty = messages.length === 0 && !isConnecting && !isStreaming;
+  const hasMessages = messages.length > 0 || isConnecting || isStreaming;
 
   // Compute how many themed blank rows we need to fill the empty space ABOVE
   // the transcript so the Gruvbox background paints the whole area (rather than
@@ -50,12 +50,11 @@ export function MessageViewport({
     .slice(viewport.visibleStart)
     .reduce((sum, value) => sum + value, 0);
   let usedLines = visibleMessageLines;
-  if (isEmpty) usedLines += 4;
-  if (!isEmpty && hasMoreAbove) usedLines += 1;
+  if (hasMessages && hasMoreAbove) usedLines += 1;
   if (isConnecting && clampedScroll === 0 && !isStreaming) usedLines += 1;
   if (isStreaming && clampedScroll === 0) usedLines += streamingLines.length;
   if (isStreaming && clampedScroll > 0) usedLines += 1;
-  if (!isEmpty && hasMoreBelow) usedLines += 1;
+  if (hasMessages && hasMoreBelow) usedLines += 1;
   const fillCount = Math.max(0, height - usedLines);
 
   return (
@@ -73,26 +72,9 @@ export function MessageViewport({
           terminals that ignore the OSC 11 default-background escape. */}
       <FillLines count={fillCount} width={width} />
 
-      {isEmpty && (
-        <Box flexDirection="column">
-          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
-            {padToWidth("fff ready", width)}
-          </Text>
-          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
-            {padToWidth("type a prompt and press Enter", width)}
-          </Text>
-          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
-            {padToWidth("Shift+Enter newline • PgUp/PgDn scroll • Ctrl+O copy • Ctrl+/ undo", width)}
-          </Text>
-          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>
-            {padToWidth(".new start a session • .resume list recent sessions", width)}
-          </Text>
-        </Box>
-      )}
-
-      {!isEmpty && hasMoreAbove && (
+      {hasMessages && hasMoreAbove && (
         <Box flexDirection="row" height={1}>
-          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{padToWidth(`↑ ${linesAbove}`, width)}</Text>
+          <Text color={MUTED_COLOR}>{padToWidth(`↑ ${linesAbove}`, width)}</Text>
         </Box>
       )}
 
@@ -114,7 +96,7 @@ export function MessageViewport({
 
       {isConnecting && clampedScroll === 0 && !isStreaming && (
         <Box flexDirection="row" width={width} overflow="hidden">
-          <Text color={ASSISTANT_COLOR} backgroundColor={THEME_BG}>{padToWidth("...", width)}</Text>
+          <Text color={ASSISTANT_COLOR}>{padToWidth("...", width)}</Text>
         </Box>
       )}
 
@@ -122,7 +104,7 @@ export function MessageViewport({
         <Box flexDirection="column" width={width} overflow="hidden">
           {streamingLines.map((line, index) => (
             <Box key={index} flexDirection="row">
-              <Text color={ASSISTANT_COLOR} backgroundColor={THEME_BG}>{padToWidth(line + " ", width)}</Text>
+              <Text color={ASSISTANT_COLOR}>{padToWidth(line + " ", width)}</Text>
             </Box>
           ))}
         </Box>
@@ -130,13 +112,13 @@ export function MessageViewport({
 
       {isStreaming && clampedScroll > 0 && (
         <Box flexDirection="row" height={1}>
-          <Text color={STATUS_BUSY_COLOR} backgroundColor={THEME_BG}>{padToWidth("↓ streaming...", width)}</Text>
+          <Text color={STATUS_BUSY_COLOR}>{padToWidth("↓ streaming...", width)}</Text>
         </Box>
       )}
 
-      {!isEmpty && hasMoreBelow && (
+      {hasMessages && hasMoreBelow && (
         <Box flexDirection="row" height={1}>
-          <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{padToWidth(`↓ ${clampedScroll}`, width)}</Text>
+          <Text color={MUTED_COLOR}>{padToWidth(`↓ ${clampedScroll}`, width)}</Text>
         </Box>
       )}
     </Box>

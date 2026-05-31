@@ -10,7 +10,6 @@ import {
   STATUS_SUCCESS_COLOR,
   SYSTEM_PROMPT,
   TEXT_COLOR,
-  THEME_BG,
   YOU_COLOR,
 } from "./config.js";
 import { getVersion } from "./version.js";
@@ -83,6 +82,11 @@ export default function App() {
       stdout.off("resize", onResize);
     };
   }, [stdout]);
+
+  // Whether to show the tips bar at the top-right. Defined early so height
+  // calculations can account for it.
+  const showTips = messages.length === 0 && !isConnecting && !isStreaming;
+
   // The prompt is compact: it starts at a single line and grows with the input
   // only up to a small cap (never the old ~30% of the screen). This keeps the
   // box small while still letting multi-line input expand when needed.
@@ -98,7 +102,8 @@ export default function App() {
   const inputHeight = promptContentHeight + 2;
   const statusHeight = 1;
   const dividerHeight = 1;
-  const msgAreaHeight = Math.max(3, termRows - inputHeight - statusHeight - dividerHeight);
+  const tipsHeight = showTips ? 1 : 0;
+  const msgAreaHeight = Math.max(3, termRows - inputHeight - statusHeight - dividerHeight - tipsHeight);
 
   const viewport = useMemo(
     () =>
@@ -308,6 +313,24 @@ export default function App() {
 
   return (
     <Box flexDirection="column" height={termRows} width={termCols} overflow="hidden">
+      {/* Fixed tips bar at the top-right, always visible and never scrolls. */}
+      {showTips && (
+        <Box flexDirection="row" width={termCols} flexShrink={0} justifyContent="flex-end">
+          <Text color={MUTED_COLOR}>
+            {"fff ready  "}
+          </Text>
+          <Text color={MUTED_COLOR}>
+            {"type a prompt and press Enter  "}
+          </Text>
+          <Text color={MUTED_COLOR}>
+            {"Shift+Enter newline • PgUp/PgDn scroll • Ctrl+O copy • Ctrl+/ undo  "}
+          </Text>
+          <Text color={MUTED_COLOR}>
+            {".new start • .resume list"}
+          </Text>
+        </Box>
+      )}
+
       {sessionPicker ? (
         <SessionPicker
           sessions={sessionPicker}
@@ -337,7 +360,7 @@ export default function App() {
 
       {/* Divider that visually separates the prompt from the status bar. */}
       <Box height={dividerHeight} width={termCols} overflow="hidden">
-        <Text color={SEPARATOR_COLOR} backgroundColor={THEME_BG}>{"─".repeat(termCols)}</Text>
+        <Text color={SEPARATOR_COLOR}>{"─".repeat(termCols)}</Text>
       </Box>
 
       <StatusBar
@@ -410,16 +433,16 @@ function StatusBar({
 
   return (
     <Box height={height} flexDirection="row" width={width} overflow="hidden">
-      <Text color={status === "thinking" ? STATUS_BUSY_COLOR : STATUS_SUCCESS_COLOR} backgroundColor={THEME_BG}>
+      <Text color={status === "thinking" ? STATUS_BUSY_COLOR : STATUS_SUCCESS_COLOR}>
         {left}
       </Text>
-      <Text backgroundColor={THEME_BG}>{" ".repeat(gap1)}</Text>
-      <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{centerLeft}</Text>
-      <Text color={ctxColor} backgroundColor={THEME_BG}>{ctxLabel}</Text>
-      <Text backgroundColor={THEME_BG}>{" ".repeat(gap2)}</Text>
-      {copyPart && <Text color={STATUS_SUCCESS_COLOR} backgroundColor={THEME_BG}>{copyPart}</Text>}
-      {scrollPart && <Text color={STATUS_BUSY_COLOR} backgroundColor={THEME_BG}>{scrollPart}</Text>}
-      {bottomPart && <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{bottomPart}</Text>}
+      <Text>{" ".repeat(gap1)}</Text>
+      <Text color={MUTED_COLOR}>{centerLeft}</Text>
+      <Text color={ctxColor}>{ctxLabel}</Text>
+      <Text>{" ".repeat(gap2)}</Text>
+      {copyPart && <Text color={STATUS_SUCCESS_COLOR}>{copyPart}</Text>}
+      {scrollPart && <Text color={STATUS_BUSY_COLOR}>{scrollPart}</Text>}
+      {bottomPart && <Text color={MUTED_COLOR}>{bottomPart}</Text>}
     </Box>
   );
 }
@@ -437,13 +460,13 @@ function SessionPicker({
   return (
     <Box flexDirection="column" justifyContent="flex-end" height={height} width={width} overflow="hidden">
       <FillLines count={Math.max(0, height - used)} width={width} />
-      <Text color={YOU_COLOR} bold backgroundColor={THEME_BG}>{padToWidth("Recent sessions", width)}</Text>
-      <Text color={MUTED_COLOR} backgroundColor={THEME_BG}>{padToWidth("type the number to resume, or .new for a fresh session", width)}</Text>
-      <Text backgroundColor={THEME_BG}>{" ".repeat(width)}</Text>
+      <Text color={YOU_COLOR} bold>{padToWidth("Recent sessions", width)}</Text>
+      <Text color={MUTED_COLOR}>{padToWidth("type the number to resume, or .new for a fresh session", width)}</Text>
+      <Text>{" ".repeat(width)}</Text>
       {sessions.map((session, index) => (
         <Box key={session.id} flexDirection="row" width={width} overflow="hidden">
-          <Text color={ASSISTANT_COLOR} bold backgroundColor={THEME_BG}>{`${index + 1}. `}</Text>
-          <Text color={TEXT_COLOR} backgroundColor={THEME_BG}>{padToWidth(sessionLabel(session), Math.max(0, width - String(index + 1).length - 2))}</Text>
+          <Text color={ASSISTANT_COLOR} bold>{`${index + 1}. `}</Text>
+          <Text color={TEXT_COLOR}>{padToWidth(sessionLabel(session), Math.max(0, width - String(index + 1).length - 2))}</Text>
         </Box>
       ))}
     </Box>
