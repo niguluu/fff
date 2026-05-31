@@ -15,10 +15,11 @@ if ! command -v bun &>/dev/null; then
 fi
 
 # Detect if we're being piped (not run from a local repo)
-if [[ -z "${BASH_SOURCE[0]:-}" ]] || [[ "${BASH_SOURCE[0]}" == "bash" ]]; then
-  SCRIPT_DIR=""
-else
-  SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR=""
+if [[ -n "${BASH_SOURCE+set}" ]]; then
+  if [[ -n "${BASH_SOURCE[0]:-}" ]] && [[ "${BASH_SOURCE[0]}" != "bash" ]]; then
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  fi
 fi
 
 if [[ -z "$SCRIPT_DIR" ]] || [[ ! -f "$SCRIPT_DIR/package.json" ]]; then
