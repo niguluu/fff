@@ -17,9 +17,11 @@ export function renderScreen(state: ScreenState, _width = 80): string {
 
   if (state.stream) {
     lines.push(state.stream);
+  } else if (state.status === "Streaming from agent...") {
+    lines.push("...");
   }
 
-  if (state.input !== undefined) {
+  if (state.input !== undefined && !state.status.startsWith("Streaming")) {
     if (lines.length > 0) lines.push("");
     lines.push(`> ${state.input}`);
   }

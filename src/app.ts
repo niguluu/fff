@@ -51,7 +51,7 @@ export class FfApp {
       return;
     }
 
-    this.state.input = trimmedPrompt;
+    this.state.input = "";
     this.state.stream = "";
     this.state.busy = true;
     this.state.status = "Streaming from agent...";
@@ -83,7 +83,6 @@ export class FfApp {
         this.#commitAssistantStream();
         this.state.status = "Ready for the next prompt";
       }
-      this.state.input = "";
     } catch (error) {
       this.state.status = error instanceof Error ? error.message : "Unknown error";
       this.state.stream = "";

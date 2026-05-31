@@ -57,6 +57,6 @@ test("FfApp surfaces harness failures without closing the session state", async 
   await app.submitPrompt("broken");
 
   assert.equal(app.state.status, "missing API key");
-  assert.equal(app.state.input, "broken");
+  assert.equal(app.state.input, "");
   assert.match(app.state.history, /You> broken/);
 });
