@@ -12,6 +12,10 @@
     // Bundler mode
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
+    "baseUrl": ".",
+    "paths": {
+      "@oh-my-pi/pi-tui": ["./src/shims/pi-tui.ts"]
+    },
     "verbatimModuleSyntax": true,
     "noEmit": true,
 
